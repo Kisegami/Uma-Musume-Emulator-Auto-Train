@@ -22,8 +22,8 @@ except Exception:
     RETRY_RACE = True
 
 # Region offsets from fan center (same as test code)
-GRADE_OFFSET = (-37, -105, 90, 45)  # x, y, width, height
-OCR_OFFSET = (47, -117, 345, 63)    # x, y, width, height
+GRADE_OFFSET = (-118, -115, 93, 69)  # x, y, width, height
+OCR_OFFSET = (-37, -120, 580, 69)  # x, y, width, height
 
 def is_racing_available(year):
     """Check if racing is available based on the current year/month"""
@@ -56,7 +56,7 @@ def get_grade_priority(grade):
 
 def find_target_race_in_screenshot(screenshot, race_description):
     """Find target race in a given screenshot and return fan center coordinates"""
-    matches = locate_all_on_screen("assets/races/fan.png", confidence=0.8, region=(321, 1018, 114, 510))
+    matches = locate_all_on_screen("assets/races/fan.png", confidence=0.8, region=(390, 1138, 513, 1495))
     
     log_debug(f"Found {len(matches) if matches else 0} fan matches")
     

@@ -348,9 +348,9 @@ def handle_event_choice():
         event_name = event_name.strip()
         
         if not event_name:
-            log_info(f"No text detected in event region")
-            # Choices were visible and stabilized earlier; provide locations for fallback top-choice click
-            return 1, False, recheck_locations
+            log_error(f"❌ EVENT DETECTION FAILED: No text detected in event region")
+            log_error(f"❌ BOT STOPPED - Please check the event screen and OCR configuration")
+            raise RuntimeError("Event detection failed: No text detected in event region. Bot stopped.")
         
         log_info(f"Event found: {event_name}")
 

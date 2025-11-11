@@ -261,6 +261,11 @@ def career_lobby():
                     continue
             else:
                 log_debug(f"No events found")
+        except RuntimeError as e:
+            # Re-raise RuntimeError (critical failures that should stop the bot)
+            if "Event detection failed" in str(e):
+                raise
+            log_error(f"Event handling error: {e}")
         except Exception as e:
             log_error(f"Event handling error: {e}")
 
