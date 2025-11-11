@@ -1,9 +1,5 @@
-# Umamusume Auto Training Bot (ADB/Android Version)
-<a href="http://discord.gg/PhVmBtfsKp" target="_blank"><img src="https://img.shields.io/discord/1399387259245166674?color=5865F2&label=Join%20our%20Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Join our Discord server"></a>
+# Umamusume Auto Training Bot (Revamped)
 
-<a href="https://www.buymeacoffee.com/kisegami" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
- 
- ## THE GUIDE MIGHT BE OUTDATED, DOCUMENT IS WIP
 
 An automated training bot for Umamusume that works with **Android emulators** using ADB (Android Debug Bridge).
 
@@ -12,8 +8,6 @@ An automated training bot for Umamusume that works with **Android emulators** us
 **🔧 Technology:** ADB commands for screen capture and input
 
 This ADB version provides the same intelligent training logic as the PC version but runs on Android emulators, offering better stability and easier setup.
-
-This project is inspired by [samsulpanjul/umamusume-auto-train](https://github.com/samsulpanjul/umamusume-auto-train)
 
 ## Features
 
@@ -28,7 +22,7 @@ This project is inspired by [samsulpanjul/umamusume-auto-train](https://github.c
 - Keeps racing until fan count meets the goal, and always picks races with matching aptitude
 - Checks mood and handles debuffs automatically
 - Rest and recreation management
-
+- Prioritizes G1 races if available for fan farming
 - **Auto Skill Purchase**: Automatically purchases skills when skill points exceed cap
 - Stat caps to prevent overtraining specific stats
 - **Intelligent Event Choice Selection**: Automatically analyzes event options and selects the best choice based on configured priorities
@@ -57,7 +51,7 @@ This project is inspired by [samsulpanjul/umamusume-auto-train](https://github.c
 #### 1. Clone Repository
 
 ```bash
-git clone https://github.com/Kisegami/Uma-Musume-Emulator-Auto-Train
+git clone https://github.com/isaiah-solo/Uma-Musume-Emulator-Auto-Train.git
 cd Uma-Musume-Emulator-Auto-Train
 ```
 
@@ -125,6 +119,22 @@ Edit the `adb_config` section in your `config.json ` using the address you got f
   }
 }
 ```
+
+#### 8. Configure local host ui
+
+In a new  *Command Prompt* run
+```cmd
+cd "C:\Users\Path\Uma-Musume-Emulator-Auto-Train"
+py -m pip install fastapi uvicorn "pydantic<3" pillow numpy
+```
+After its installed run the following command 
+
+```cmd
+py -m uvicorn web_config:app --host 127.0.0.1 --port 8000
+```
+Then go to "http://127.0.0.1:8000" on your browser, you can make change real time with the inputs and confirm by clicking "Save"
+
+
 ### BEFORE YOU START
 
 Make sure these conditions are met:
@@ -157,7 +167,7 @@ You can edit your configuration in `config.json`
   "maximum_failure": 15,
   
   "strategy": "PACE",
-
+  "prioritize_g1_race": false,
   "retry_race": true,
 
   "skill_point_cap": 400,
@@ -205,9 +215,10 @@ You can edit your configuration in `config.json`
 - Sets the maximum acceptable failure chance (in percent) before skipping a training option.
 - Example: 10 means the bot will avoid training with more than 10% failure risk.
 
-
+`prioritize_g1_race` (boolean)
+- If `true`, the bot will prioritize G1 races except during July and August (summer).
 - Useful for fan farming.
-
+- **Warning**: It will do G1 race no matter what
 
 `retry_race` (boolean)
 - Controls whether the bot automatically retries failed races,. **MAKE SURE YOUR HAVE MORE THAN 3 CLOCKS**
@@ -334,23 +345,6 @@ Training Score = Support Card Score + Hint Bonus
 5. **Tie-Breaking**: Use priority order from `priority_stat` configuration
 6. **Final Selection**: Choose training with highest score
 
-#### **Updated Training Logic (v2.0)**
-The bot now implements smarter training decision making:
-
-**When `do_race_when_bad_training` is FALSE:**
-- **No score filtering**: All training options that pass failure rate checks are considered
-- **Best training selection**: Chooses the training with the highest score among failure-eligible options
-- **Optimal for rest scenarios**: When you want the bot to always choose the best available training
-
-**When `do_race_when_bad_training` is TRUE:**
-- **Score filtering enabled**: Applies `min_score` and `min_wit_score` thresholds
-- **Special WIT handling**: WIT training always checks `min_wit_score` since it has much lower failure rates
-- **Race prioritization**: If no training meets score requirements, the bot will prioritize racing instead of resting
-
-**Key Benefits:**
-- **Flexible training**: Choose between always training optimally or being selective about training quality
-- **WIT optimization**: Special handling for WIT training's naturally lower failure rates
-- **Better resource management**: Avoid unnecessary rest when good training options exist
 
 ### **Skill Configuration**
 
@@ -485,7 +479,7 @@ The bot automatically selects the best event choice based on your configured pri
 ### Start
 #### 1. Start the Bot (Make sure you done the config)
 ```bash
-python main.py
+python main_adb.py
 ```
 
 #### 2. Stop the Bot
@@ -504,21 +498,3 @@ python main.py
 - Tesseract OCR might misread failure chance (e.g., reads 33% as 3%) and proceeds with training anyway
 - If you bring a friend support card (like Tazuna/Aoi Kiryuin) and do recreation, the bot can't decide whether to date with the friend support card or the Uma
 - The bot will skip "3 consecutive races warning" prompt for now
-
-### TODO
-- Do race that doesn't have trophy yet
-- Add consecutive races limit
-- Add fans tracking/goal for Senior year (Valentine day, Fan Fest and Holiday Season)
-- Add option to do race in Summer (July - August)
-- ~~Add better event options handling~~
-- ~~Automate Claw Machine event~~
-- ~~Auto-purchase skills~~
-- ~~Add energy bar detection and management~~
-- ~~Add new advanced training scoring algorithm~~
-- ~~Add auto retry for failed races~~
-- ~~Improve Tesseract OCR accuracy for failure chance detection~~
-- ~~Add Race Strategy option~~
-
-### Contribute
-If you run into any issues or something doesn't work as expected, feel free to open an issue.
-Contributions are also very welcome, I would truly appreciate any support to help improve this project further.

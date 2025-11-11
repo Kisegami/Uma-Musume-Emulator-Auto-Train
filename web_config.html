@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Uma Auto – Live Config</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; background:#0b1020; color:#e8ecff; }
+      h1 { margin: 0 0 8px 0; }
+      .status { margin-left: 8px; font-size: 12px; opacity: .85; }
+      .card { border: 1px solid #203057; background:#111937; border-radius: 14px; padding: 16px; margin-top: 16px; }
+      .row { display: grid; grid-template-columns: 220px 1fr; gap: 8px 16px; align-items: center; margin: 8px 0; }
+      input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #2a3c6e; background:#0e1530; color:#e8ecff; }
+      textarea { min-height: 100px; resize: vertical; }
+      .btns { display:flex; gap:10px; margin-top: 16px; }
+      button { padding: 10px 14px; border:0; border-radius: 10px; cursor: pointer; }
+      .primary { background:#2563eb; color:white; }
+      .secondary { background:#1f2b52; color:#e8ecff; }
+      .inline { display:flex; gap:8px; }
+      .pill { padding: 6px 10px; background:#1a2450; border-radius: 999px; font-size: 12px; }
+      .flex { display:flex; align-items:center; gap:8px; }
+      .spacer { flex:1; }
+      .help { font-size:12px; opacity:.8; }
+    </style>
+  </head>
+  <body>
+    <h1>Uma Auto – Live Config</h1>
+    <div class="flex">
+      <div>Editing <span class="pill">config.json</span> on <span class="pill">http://127.0.0.1:8000</span></div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="card">
+      <div id="form"></div>
+      <div class="btns">
+        <button class="primary" id="saveBtn">Save</button>
+        <button class="secondary" id="revertBtn">Revert</button>
+        <button class="secondary" id="refreshBtn">Refresh</button>
+        <div class="spacer"></div>
+        <label class="flex help"><input type="checkbox" id="autoRefresh" checked style="width:auto;"> Auto-refresh 2s</label>
+      </div>
+    </div>
+
+    <script>
+      const formDiv = document.getElementById("form");
+      const statusEl = document.getElementById("status");
+      const autoRefreshEl = document.getElementById("autoRefresh");
+      let current = {};
+      let lastSerialized = "";
+
+      const statOptions = ["spd","sta","wit","pwr","guts"];
+
+      function setStatus(msg, ok=true) {
+        statusEl.textContent = msg;
+        statusEl.style.color = ok ? "#39d353" : "#ff6b6b";
+      }
+
+      function makeBoolSelect(value) {
+        const s = document.createElement("select");
+        s.dataset.type = "bool";
+        const t = document.createElement("option"); t.value="true";  t.text="true";
+        const f = document.createElement("option"); f.value="false"; f.text="false";
+        s.appendChild(t); s.appendChild(f);
+        s.value = String(value);
+        return s;
+      }
+
+      function makeStatSelect(value) {
+        const s = document.createElement("select");
+        s.dataset.type = "stat";
+        statOptions.forEach(o=>{
+          const opt = document.createElement("option");
+          opt.value = o; opt.text = o.toUpperCase();
+          if (o===value) opt.selected = true;
+          s.appendChild(opt);
+        });
+        return s;
+      }
+
+      function inputFor(key, val) {
+        const row = document.createElement("div");
+        row.className = "row";
+        const label = document.createElement("label");
+        label.textContent = key;
+        let input;
+
+        if (key === "priority_stat" && Array.isArray(val)) {
+          input = document.createElement("div");
+          input.className = "inline";
+          input.dataset.group = "priority_stat";
+          for (let i=0;i<5;i++){
+            const v = val[i] || statOptions[i];
+            const sel = makeStatSelect(v);
+            sel.dataset.key = `priority_stat_${i}`;
+            input.appendChild(sel);
+          }
+        } else if (typeof val === "boolean") {
+          input = makeBoolSelect(val);
+          input.dataset.key = key;
+        } else if (typeof val === "number") {
+          input = document.createElement("input");
+          input.type = "number";
+          input.value = val;
+          input.dataset.key = key;
+        } else if (typeof val === "object" && val !== null) {
+          input = document.createElement("textarea");
+          input.value = JSON.stringify(val, null, 2);
+          input.dataset.json = "true";
+          input.dataset.key = key;
+        } else {
+          input = document.createElement("input");
+          input.type = "text";
+          input.value = val ?? "";
+          input.dataset.key = key;
+        }
+
+        row.appendChild(label);
+        row.appendChild(input);
+        return row;
+      }
+
+      function render(cfg) {
+        formDiv.innerHTML = "";
+        Object.keys(cfg).forEach(k => formDiv.appendChild(inputFor(k, cfg[k])));
+        lastSerialized = JSON.stringify(cfg);
+      }
+
+      async function load() {
+        try {
+          const res = await fetch("/api/config");
+          if (!res.ok) throw new Error(await res.text());
+          const cfg = await res.json();
+          current = cfg;
+          render(cfg);
+          setStatus("Loaded");
+        } catch (e) {
+          setStatus("Load failed: " + e.message, false);
+        }
+      }
+
+      function collect() {
+        const out = {};
+        const inputs = formDiv.querySelectorAll("[data-key], [data-group='priority_stat'] > select");
+
+        const tempPriority = new Array(5);
+        inputs.forEach(el => {
+          const isPriority = el.dataset.key && el.dataset.key.startsWith("priority_stat_");
+          if (isPriority) {
+            const idx = parseInt(el.dataset.key.split("_").pop());
+            tempPriority[idx] = el.value;
+            return;
+          }
+
+          const key = el.dataset.key;
+          if (!key) return;
+
+          if (el.dataset.json === "true") {
+            try { out[key] = JSON.parse(el.value || "null"); }
+            catch { out[key] = el.value; }
+          } else if (el.tagName === "SELECT" && el.dataset.type === "bool") {
+            out[key] = (el.value === "true");
+          } else if (el.type === "number") {
+            const v = el.value.trim();
+            out[key] = v === "" ? null : Number(v);
+          } else {
+            out[key] = el.value;
+          }
+        });
+
+        if (formDiv.querySelector("[data-group='priority_stat']")) {
+          out["priority_stat"] = tempPriority.map((v,i)=> v || statOptions[i]);
+        }
+        return out;
+      }
+
+      async function save() {
+        const data = collect();
+        for (const [k,v] of Object.entries(data)) {
+          const input = formDiv.querySelector(`[data-key="${k}"]`);
+          if (input?.dataset.json === "true") {
+            try { JSON.parse(input.value); } catch (e) {
+              setStatus(`Invalid JSON in "${k}": ${e.message}`, false);
+              return;
+            }
+          }
+        }
+        try {
+          const res = await fetch("/api/config", {
+            method: "PUT",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify(data, null, 2)
+          });
+          if (!res.ok) throw new Error(await res.text());
+          current = data;
+          lastSerialized = JSON.stringify(current);
+          setStatus("Saved");
+        } catch (e) {
+          setStatus("Save failed: " + e.message, false);
+        }
+      }
+
+      function revert(){ render(current); setStatus("Reverted changes"); }
+
+      document.getElementById("saveBtn").onclick = save;
+      document.getElementById("revertBtn").onclick = revert;
+      document.getElementById("refreshBtn").onclick = load;
+
+      setInterval(async () => {
+        if (!autoRefreshEl.checked) return;
+        try {
+          const res = await fetch("/api/config");
+          if (!res.ok) return;
+          const cfg = await res.json();
+          const nowSer = JSON.stringify(cfg);
+          if (nowSer !== lastSerialized) {
+            current = cfg;
+            render(cfg);
+            setStatus("Auto-refreshed");
+          }
+        } catch {}
+      }, 2000);
+
+      load();
+    </script>
+  </body>
+</html>

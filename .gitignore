@@ -2,10 +2,8 @@ venv/
 __pycache__/
 tools/
 screenshots/
-test_*/
 test_screenshots/
 Tesseract-OCR/
-standalone/
 *.pyc
 .DS_Store
 Thumbs.db
@@ -27,6 +25,14 @@ debug_*.jpg
 *.png.bak
 screenshot.png
 
+# PC version files (keeping only ADB version)
+core/execute.py
+core/state.py
+core/recognizer.py
+utils/screenshot.py
+utils/constants.py
+main.py
+
 # Test and debug scripts
 test_turn_detection.py
 test_choice_count.py
@@ -40,3 +46,4 @@ temp_*.png
 temp_*.jpg
 annotated_*.png
 processed_*.png
+event_ocr_simple_*.png

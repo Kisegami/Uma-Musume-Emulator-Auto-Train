@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from utils.log import log_info, log_warning, log_error, log_debug, log_success
 """
 Configuration Setup Script for Uma Musume Auto Trainer
 
@@ -10,17 +9,6 @@ This prevents conflicts when pulling updates from the repository.
 import os
 import shutil
 import sys
-
-# Fix Windows console encoding for Unicode support
-if os.name == 'nt':  # Windows
-    try:
-        # Set console to UTF-8 mode
-        os.system('chcp 65001 > nul')
-        # Also try to set stdout encoding
-        if hasattr(sys.stdout, 'reconfigure'):
-            sys.stdout.reconfigure(encoding='utf-8')
-    except:
-        pass
 
 def copy_example_files():
     """Copy example configuration files to working copies"""
@@ -52,7 +40,7 @@ def copy_example_files():
     print("\nNext steps:")
     print("1. Edit the copied .json files to customize your settings")
     print("2. Your customizations will be preserved when pulling updates")
-    print("3. Run the bot with: python main.py")
+    print("3. Run the bot with: python main_adb.py")
     print("\nNote: The .example files are templates and won't be modified.")
 
 if __name__ == "__main__":
