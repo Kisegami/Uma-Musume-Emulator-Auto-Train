@@ -290,32 +290,37 @@ def extract_event_name_text(pil_img: Image.Image) -> str:
         
         result_text = ' '.join(high_confidence_words).strip()
         
-        # Apply database matching (handles all post-processing internally)
+        # Log raw OCR result BEFORE database matching
         if result_text:
-            result_text = find_best_event_match(result_text)
-            log_debug(f"Event name OCR result: '{result_text}'")
-            return result_text
+            log_debug(f"Event name RAW OCR: '{result_text}'")
+            # Apply database matching (handles all post-processing internally)
+            matched_text = find_best_event_match(result_text)
+            log_debug(f"Event name MATCHED: '{matched_text}'")
+            return matched_text
         
         return ""
     except Exception as e:
         log_warning(f"Event name OCR extraction failed: {e}")
         return ""
 
-def find_best_event_match(ocr_text):
-    """Find best matching event from database using simple and efficient method"""
+# Cache for event names to avoid reloading JSON files every time
+_event_names_cache = None
+
+def _load_all_event_names():
+    """Load all event names from databases with caching for performance"""
+    global _event_names_cache
+    
+    # Return cached data if available
+    if _event_names_cache is not None:
+        return _event_names_cache
+    
     try:
-        import json
-        import os
-        from difflib import SequenceMatcher
-        
-        # Load event databases
         all_event_names = []
         
         # Load support card events
         if os.path.exists("assets/events/support_card.json"):
             with open("assets/events/support_card.json", "r", encoding="utf-8-sig") as f:
-                support_events = json.load(f)
-                for event in support_events:
+                for event in json.load(f):
                     event_name = event.get("EventName", "")
                     if event_name and event_name not in all_event_names:
                         all_event_names.append(event_name)
@@ -323,57 +328,88 @@ def find_best_event_match(ocr_text):
         # Load uma data events
         if os.path.exists("assets/events/uma_data.json"):
             with open("assets/events/uma_data.json", "r", encoding="utf-8-sig") as f:
-                uma_data = json.load(f)
-                for character in uma_data:
-                    if "UmaEvents" in character:
-                        for event in character["UmaEvents"]:
-                            event_name = event.get("EventName", "")
-                            if event_name and event_name not in all_event_names:
-                                all_event_names.append(event_name)
+                for character in json.load(f):
+                    for event in character.get("UmaEvents", []):
+                        event_name = event.get("EventName", "")
+                        if event_name and event_name not in all_event_names:
+                            all_event_names.append(event_name)
         
         # Load ura finale events
         if os.path.exists("assets/events/ura_finale.json"):
             with open("assets/events/ura_finale.json", "r", encoding="utf-8-sig") as f:
-                ura_events = json.load(f)
-                for event in ura_events:
+                for event in json.load(f):
                     event_name = event.get("EventName", "")
                     if event_name and event_name not in all_event_names:
                         all_event_names.append(event_name)
+        
+        # Cache the result
+        _event_names_cache = all_event_names
+        return all_event_names
+    
+    except Exception as e:
+        log_warning(f"Error loading event names: {e}")
+        return []
+
+def find_best_event_match(ocr_text):
+    """Find best matching event from database using optimized priority-based matching
+    
+    Priority:
+    1. Exact match (case-insensitive)
+    2. Substring match (OCR text contained in DB name)
+    3. Similarity match (60%+ similar)
+    
+    Args:
+        ocr_text: The OCR-extracted event name
+    
+    Returns:
+        str: Best matching event name from database, or original text if no match
+    """
+    try:
+        from difflib import SequenceMatcher
+        
+        # Load event names (cached after first load)
+        all_event_names = _load_all_event_names()
         
         if not ocr_text or not all_event_names:
             return ocr_text
         
         def normalize(s):
+            """Remove special markers from event names"""
             return s.replace("(❯)", "").replace("(❯❯)", "").replace("(❯❯❯)", "").strip()
         
         clean_ocr = normalize(ocr_text.strip())
         if not clean_ocr:
             return ocr_text
         
+        clean_ocr_lower = clean_ocr.lower()
         best_match = ocr_text
         best_ratio = 0.0
+        best_is_substring = False
         
         for db_event in all_event_names:
             db_norm = normalize(db_event)
+            db_norm_lower = db_norm.lower()
             
-            # Exact match
-            if db_norm.lower() == clean_ocr.lower():
+            # Priority 1: Exact match - return immediately
+            if db_norm_lower == clean_ocr_lower:
                 return db_event
             
-            # OCR contained in DB name
-            if clean_ocr.lower() in db_norm.lower():
-                if not best_match or len(db_norm) < len(best_match):
+            # Priority 2: Substring match (OCR contained in DB name)
+            if clean_ocr_lower in db_norm_lower:
+                # Prefer shorter matches (fewer extra characters = better match)
+                if not best_is_substring or len(db_norm) < len(normalize(best_match)):
                     best_match = db_event
-                    best_ratio = 0.92
+                    best_is_substring = True
             
-            # Similarity match
-            else:
-                ratio = SequenceMatcher(None, clean_ocr.lower(), db_norm.lower()).ratio()
+            # Priority 3: Similarity match - only if no substring match found
+            elif not best_is_substring:
+                ratio = SequenceMatcher(None, clean_ocr_lower, db_norm_lower).ratio()
                 if ratio > best_ratio and ratio >= 0.6:
                     best_ratio = ratio
                     best_match = db_event
         
         return best_match
+    
     except Exception as e:
         log_warning(f"Event name matching failed: {e}")
         return ocr_text

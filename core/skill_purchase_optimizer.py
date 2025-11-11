@@ -205,14 +205,27 @@ def find_best_real_skill_match(ocr_skill_name, target_skill_name=None, threshold
             
             # Bonus for target skill match (if we're looking for a specific target)
             # But only if the similarity is already quite high to prevent false matches
-            if target_skill_name and skill_clean == target_skill_name.lower().strip() and similarity >= 0.9:
-                similarity += 0.05  # Small bonus for target match, only for high-confidence matches
-                similarity = min(similarity, 1.0)  # Cap at 1.0
+            if target_skill_name:
+                target_clean = target_skill_name.lower().strip()
+                # Check if both the real skill matches OCR well AND matches the target (with tolerance for punctuation)
+                # Strip punctuation for comparison
+                skill_no_punct = ''.join(c for c in skill_clean if c.isalnum() or c.isspace())
+                target_no_punct = ''.join(c for c in target_clean if c.isalnum() or c.isspace())
+                if skill_no_punct == target_no_punct and similarity >= 0.9:
+                    similarity += 0.05  # Small bonus for target match, only for high-confidence matches
+                    similarity = min(similarity, 1.0)  # Cap at 1.0
             
             if similarity > best_confidence and similarity >= threshold:
                 best_match = skill
                 best_confidence = similarity
-                is_target_match = (target_skill_name and skill_clean == target_skill_name.lower().strip())
+                # Check if this matches the target (ignoring punctuation differences)
+                if target_skill_name:
+                    target_clean = target_skill_name.lower().strip()
+                    skill_no_punct = ''.join(c for c in skill_clean if c.isalnum() or c.isspace())
+                    target_no_punct = ''.join(c for c in target_clean if c.isalnum() or c.isspace())
+                    is_target_match = (skill_no_punct == target_no_punct)
+                else:
+                    is_target_match = False
     
     log_debug(f"Skill match: '{ocr_skill_name}' -> '{best_match}' (confidence: {best_confidence:.3f}, target: {target_skill_name})")
     
@@ -230,19 +243,24 @@ def fuzzy_match_skill_name(skill_name, target_name, threshold=0.8):
     
     Args:
         skill_name: Name from OCR scan
-        target_name: Name from config file
+        target_name: Name from config file or another OCR scan
         threshold: Minimum similarity ratio (0.0 to 1.0)
     
     Returns:
-        bool: True if the OCR skill matches the target skill
+        bool: True if both names refer to the same real skill
     """
-    # Use the new precise matching system
-    result = find_best_real_skill_match(skill_name, target_name, threshold)
+    # Match both names against the real skill database
+    skill_result = find_best_real_skill_match(skill_name, None, threshold)
+    target_result = find_best_real_skill_match(target_name, None, threshold)
     
-    # Return True only if we found a match AND it matches the target AND meets threshold
-    return (result['match'] is not None and 
-            result['is_target_match'] and 
-            result['confidence'] >= threshold)
+    # If both matched to the same real skill (ignoring punctuation), they match
+    if skill_result['match'] and target_result['match']:
+        # Normalize by removing punctuation for comparison
+        skill_normalized = ''.join(c for c in skill_result['match'].lower() if c.isalnum() or c.isspace())
+        target_normalized = ''.join(c for c in target_result['match'].lower() if c.isalnum() or c.isspace())
+        return skill_normalized == target_normalized
+    
+    return False
 
 def find_matching_skill(skill_name, available_skills):
     """
