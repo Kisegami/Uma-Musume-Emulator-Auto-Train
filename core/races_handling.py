@@ -30,8 +30,8 @@ def is_racing_available(year):
     # No races in Pre-Debut
     if is_pre_debut_year(year):
         return False
-    # No races in Finale Season (final training period before URA)
-    if "Finale Season" in year:
+    # No races in Finale Underway (final training period before URA)
+    if "Finale Underway" in year:
         return False
     year_parts = year.split(" ")
     # No races in July and August (summer break)
@@ -314,8 +314,8 @@ def check_strategy_before_race(region=(660, 974, 378, 120)) -> bool:
         
         if change_strategy_before_race(expected_strategy):
             # Recheck after change
-            new_strategy, new_matches = check_strategy_before_race(region)
-            if new_matches:
+            strategy_changed = check_strategy_before_race(region)
+            if strategy_changed:
                 log_debug(f"Strategy successfully changed")
                 return True
             else:

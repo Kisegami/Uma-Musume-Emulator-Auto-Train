@@ -1,5 +1,359 @@
 ﻿[
   {
+    "UmaName": "Hishi Akebono",
+    "UmaObjectives": [
+      {
+        "ObjectiveName": "1. Participate in the Junior Make Debut",
+        "Turn": "Turn 12",
+        "Time": "Junior Class, Late June",
+        "ObjectiveCondition": "Turf – 1600m – Mile"
+      },
+      {
+        "ObjectiveName": "2. Have at least 3000 fans",
+        "Turn": "Turn 23 (previous + 10)",
+        "Time": "Junior Class, Early December",
+        "ObjectiveCondition": ""
+      },
+      {
+        "ObjectiveName": "3. Have at least 10000 fans",
+        "Turn": "Turn 37 (previous + 13)",
+        "Time": "Classic Class, Early July",
+        "ObjectiveCondition": ""
+      },
+      {
+        "ObjectiveName": "4. Place 3rd or better in the Sprinters Stakes",
+        "Turn": "Turn 42 (previous + 4)",
+        "Time": "Classic Class, Late September",
+        "ObjectiveCondition": "G1 – Turf – 1200m – Short"
+      },
+      {
+        "ObjectiveName": "5. Place 3rd or better in the Swan Stakes",
+        "Turn": "Turn 44 (previous + 1)",
+        "Time": "Classic Class, Late October",
+        "ObjectiveCondition": "G2 – Turf – 1400m – Short"
+      },
+      {
+        "ObjectiveName": "6. Place 3rd or better in the Mile Championship",
+        "Turn": "Turn 46 (previous + 1)",
+        "Time": "Classic Class, Late November",
+        "ObjectiveCondition": "G1 – Turf – 1600m – Mile"
+      },
+      {
+        "ObjectiveName": "7. Place 1st in the Takamatsunomiya Kinen",
+        "Turn": "Turn 54 (previous + 7)",
+        "Time": "Senior Class, Late March",
+        "ObjectiveCondition": "G1 – Turf – 1200m – Short"
+      },
+      {
+        "ObjectiveName": "8. Place 2nd or better in the Yasuda Kinen",
+        "Turn": "Turn 59 (previous + 4)",
+        "Time": "Senior Class, Early June",
+        "ObjectiveCondition": "G1 – Turf – 1600m – Mile"
+      },
+      {
+        "ObjectiveName": "9. Place 1st in the Sprinters Stakes",
+        "Turn": "Turn 66 (previous + 6)",
+        "Time": "Senior Class, Late September",
+        "ObjectiveCondition": "G1 – Turf – 1200m – Short"
+      },
+      {
+        "ObjectiveName": "10. Place 1st in the Mile Championship",
+        "Turn": "Turn 70 (previous + 3)",
+        "Time": "Senior Class, Late November",
+        "ObjectiveCondition": "G1 – Turf – 1600m – Mile"
+      }
+    ],
+    "UmaEvents": []
+  },
+  {
+    "UmaName": "Matikanefukukitaru",
+    "UmaObjectives": [
+      {
+        "ObjectiveName": "1. Participate in the Junior Make Debut",
+        "Turn": "Turn 12",
+        "Time": "Junior Class, Late June",
+        "ObjectiveCondition": "Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "2. Place 5th or better in the Yayoi Sho",
+        "Turn": "Turn 29 (previous + 16)",
+        "Time": "Classic Class, Early March",
+        "ObjectiveCondition": "G2 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "3. Place 5th or better in the Tokyo Yushun (Japanese Derby)",
+        "Turn": "Turn 34 (previous + 4)",
+        "Time": "Classic Class, Late May",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "4. Place 3rd or better in the Kikuka Sho",
+        "Turn": "Turn 44 (previous + 9)",
+        "Time": "Classic Class, Late October",
+        "ObjectiveCondition": "G1 – Turf – 3000m – Long"
+      },
+      {
+        "ObjectiveName": "5. Place 3rd or better in the Kinko Sho",
+        "Turn": "Turn 53 (previous + 8)",
+        "Time": "Senior Class, Early March",
+        "ObjectiveCondition": "G2 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "6. Place 3rd or better in the Takarazuka Kinen",
+        "Turn": "Turn 60 (previous + 6)",
+        "Time": "Senior Class, Late June",
+        "ObjectiveCondition": "G1 – Turf – 2200m – Medium"
+      },
+      {
+        "ObjectiveName": "7. Place 2nd or better in the Hakodate Kinen",
+        "Turn": "Turn 61",
+        "Time": "Senior Class, Early July",
+        "ObjectiveCondition": "G3 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "8. Place 1st in the Arima Kinen",
+        "Turn": "Turn 72 (previous + 10)",
+        "Time": "Senior Class, Late December",
+        "ObjectiveCondition": "G1 – Turf – 2500m – Long"
+      }
+    ],
+    "UmaEvents": []
+  },
+  {
+    "UmaName": "Eishin Flash",
+    "UmaObjectives": [
+      {
+        "ObjectiveName": "1. Participate in the Junior Make Debut",
+        "Turn": "Turn 12",
+        "Time": "Junior Class, Late June",
+        "ObjectiveCondition": "Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "2. Place 5th or better in the Keisei Hai",
+        "Turn": "Turn 25 (previous + 12)",
+        "Time": "Classic Class, Early January",
+        "ObjectiveCondition": "G3 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "3. Place 5th or better in the Satsuki Sho",
+        "Turn": "Turn 31 (previous + 5)",
+        "Time": "Classic Class, Early April",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "4. Place 5th or better in the Tokyo Yushun (Japanese Derby)",
+        "Turn": "Turn 34 (previous + 2)",
+        "Time": "Classic Class, Late May",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "5. Participate in the Japan Cup",
+        "Turn": "Turn 46 (previous + 11)",
+        "Time": "Classic Class, Late November",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "6. Participate in the Arima Kinen",
+        "Turn": "Turn 48 (previous + 1)",
+        "Time": "Classic Class, Late December",
+        "ObjectiveCondition": "G1 – Turf – 2500m – Long"
+      },
+      {
+        "ObjectiveName": "7. Place 3rd or better in the Osaka Hai",
+        "Turn": "Turn 54 (previous + 5)",
+        "Time": "Senior Class, Late March",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "8. Place 3rd or better in the Tenno Sho (Spring)",
+        "Turn": "Turn 56 (previous + 1)",
+        "Time": "Senior Class, Late April",
+        "ObjectiveCondition": "G1 – Turf – 3200m – Long"
+      },
+      {
+        "ObjectiveName": "9. Place 1st in the Tenno Sho (Autumn)",
+        "Turn": "Turn 68 (previous + 11)",
+        "Time": "Senior Class, Late October",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "10. Place 1st in the Arima Kinen",
+        "Turn": "Turn 72 (previous + 3)",
+        "Time": "Senior Class, Late December",
+        "ObjectiveCondition": "G1 – Turf – 2500m – Long"
+      }
+    ],
+    "UmaEvents": []
+  },
+  {
+    "UmaName": "Meisho Doto",
+    "UmaObjectives": [
+      {
+        "ObjectiveName": "1. Participate in the Junior Make Debut",
+        "Turn": "Turn 12",
+        "Time": "Junior Class, Late June",
+        "ObjectiveCondition": "Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "2. Have at least 6000 fans",
+        "Turn": "Turn 31 (previous + 18)",
+        "Time": "Classic Class, Early April",
+        "ObjectiveCondition": ""
+      },
+      {
+        "ObjectiveName": "3. Have at least 15000 fans",
+        "Turn": "Turn 44 (previous + 12)",
+        "Time": "Classic Class, Late October",
+        "ObjectiveCondition": ""
+      },
+      {
+        "ObjectiveName": "4. Place 3rd or better in the Nikkei Shinshun Hai",
+        "Turn": "Turn 49 (previous + 4)",
+        "Time": "Senior Class, Early January",
+        "ObjectiveCondition": "G2 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "5. Place 1st in the Kinko Sho",
+        "Turn": "Turn 53 (previous + 3)",
+        "Time": "Senior Class, Early March",
+        "ObjectiveCondition": "G2 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "6. Place 2nd or better in the Takarazuka Kinen",
+        "Turn": "Turn 60 (previous + 6)",
+        "Time": "Senior Class, Late June",
+        "ObjectiveCondition": "G1 – Turf – 2200m – Medium"
+      },
+      {
+        "ObjectiveName": "7. Place 2nd or better in the Tenno Sho (Autumn)",
+        "Turn": "Turn 68 (previous + 7)",
+        "Time": "Senior Class, Late October",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "8. Place 2nd or better in the Japan Cup",
+        "Turn": "Turn 70 (previous + 1)",
+        "Time": "Senior Class, Late November",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "9. Place 1st in the Arima Kinen",
+        "Turn": "Turn 72 (previous + 1)",
+        "Time": "Senior Class, Late December",
+        "ObjectiveCondition": "G1 – Turf – 2500m – Long"
+      }
+    ],
+    "UmaEvents": []
+  },
+  {
+    "UmaName": "Special Week",
+    "UmaObjectives": [
+      {
+        "ObjectiveName": "1. Participate in the Junior Make Debut",
+        "Turn": "Turn 12",
+        "Time": "Junior Class, Late June",
+        "ObjectiveCondition": "Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "2. Place 5th or better in the Kisaragi Sho",
+        "Turn": "Turn 27 (previous + 14)",
+        "Time": "Classic Class, Early February",
+        "ObjectiveCondition": "G3 – Turf – 1800m – Mile"
+      },
+      {
+        "ObjectiveName": "3. Place 5th or better in the Tokyo Yushun (Japanese Derby)",
+        "Turn": "Turn 34 (previous + 6)",
+        "Time": "Classic Class, Late May",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "4. Place 3rd or better in the Kikuka Sho",
+        "Turn": "Turn 44 (previous + 9)",
+        "Time": "Classic Class, Late October",
+        "ObjectiveCondition": "G1 – Turf – 3000m – Long"
+      },
+      {
+        "ObjectiveName": "5. Place 3rd or better in the Tenno Sho (Spring)",
+        "Turn": "Turn 56 (previous + 11)",
+        "Time": "Senior Class, Late April",
+        "ObjectiveCondition": "G1 – Turf – 3200m – Long"
+      },
+      {
+        "ObjectiveName": "6. Place 2nd or better in the Japan Cup",
+        "Turn": "Turn 70 (previous + 13)",
+        "Time": "Senior Class, Late November",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "7. Place 1st in the Arima Kinen",
+        "Turn": "Turn 72 (previous + 1)",
+        "Time": "Senior Class, Late December",
+        "ObjectiveCondition": "G1 – Turf – 2500m – Long"
+      }
+    ],
+    "UmaEvents": []
+  },
+  {
+    "UmaName": "Maruzensky",
+    "UmaObjectives": [
+      {
+        "ObjectiveName": "1. Participate in the Junior Make Debut",
+        "Turn": "Turn 12",
+        "Time": "Junior Class, Late June",
+        "ObjectiveCondition": "Turf – 1200m – Short"
+      },
+      {
+        "ObjectiveName": "2. Place 5th or better in the Asahi Hai Futurity Stakes",
+        "Turn": "Turn 23 (previous + 10)",
+        "Time": "Junior Class, Early December",
+        "ObjectiveCondition": "G1 – Turf – 1600m – Mile"
+      },
+      {
+        "ObjectiveName": "3. Place 3rd or better in the Spring Stakes",
+        "Turn": "Turn 30 (previous + 6)",
+        "Time": "Classic Class, Late March",
+        "ObjectiveCondition": "G2 – Turf – 1800m – Mile"
+      },
+      {
+        "ObjectiveName": "4. Place 5th or better in the Satsuki Sho",
+        "Turn": "Turn 31",
+        "Time": "Classic Class, Early April",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "5. Place 5th or better in the Tokyo Yushun (Japanese Derby)",
+        "Turn": "Turn 34 (previous + 2)",
+        "Time": "Classic Class, Late May",
+        "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
+      },
+      {
+        "ObjectiveName": "6. Participate in the Arima Kinen",
+        "Turn": "Turn 48 (previous + 13)",
+        "Time": "Classic Class, Late December",
+        "ObjectiveCondition": "G1 – Turf – 2500m – Long"
+      },
+      {
+        "ObjectiveName": "7. Place 1st in the Osaka Hai",
+        "Turn": "Turn 54 (previous + 5)",
+        "Time": "Senior Class, Late March",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      },
+      {
+        "ObjectiveName": "8. Place 1st in the Yasuda Kinen",
+        "Turn": "Turn 59 (previous + 4)",
+        "Time": "Senior Class, Early June",
+        "ObjectiveCondition": "G1 – Turf – 1600m – Mile"
+      },
+      {
+        "ObjectiveName": "9. Place 1st in the Tenno Sho (Autumn)",
+        "Turn": "Turn 68 (previous + 8)",
+        "Time": "Senior Class, Late October",
+        "ObjectiveCondition": "G1 – Turf – 2000m – Medium"
+      }
+    ],
+    "UmaEvents": []
+  },
+  {
     "UmaName": "Gold City",
     "UmaObjectives": [
       {
@@ -63,554 +417,7 @@
         "ObjectiveCondition": "G1 – Turf – 2400m – Medium"
       }
     ],
-    "UmaEvents": [
-      {
-        "EventName": "Client's Orders",
-        "EventOptions": {
-          "Top Option": "Speed +20"
-        }
-      },
-      {
-        "EventName": "Client's Orders",
-        "EventOptions": {
-          "Bottom Option": "Guts +20"
-        }
-      },
-      {
-        "EventName": "Children and Adults",
-        "EventOptions": {
-          "Top Option": "Wit +20"
-        }
-      },
-      {
-        "EventName": "Children and Adults",
-        "EventOptions": {
-          "Bottom Option": "Stamina +10\r\nGuts +10"
-        }
-      },
-      {
-        "EventName": "Ideal Image",
-        "EventOptions": {
-          "Top Option": "Speed +20\r\n(random) Get Charming ○ status"
-        }
-      },
-      {
-        "EventName": "Ideal Image",
-        "EventOptions": {
-          "Bottom Option": "Power +20\r\n(random) Get Charming ○ status"
-        }
-      },
-      {
-        "EventName": "City's Salon",
-        "EventOptions": {
-          "Top Option": "Guts +10"
-        }
-      },
-      {
-        "EventName": "City's Salon",
-        "EventOptions": {
-          "Bottom Option": "Speed +10"
-        }
-      },
-      {
-        "EventName": "Never Skip Meals",
-        "EventOptions": {
-          "Top Option": "Power +10"
-        }
-      },
-      {
-        "EventName": "Never Skip Meals",
-        "EventOptions": {
-          "Bottom Option": "Stamina +10"
-        }
-      },
-      {
-        "EventName": "Dorm Quiz Battle",
-        "EventOptions": {
-          "Top Option": "Speed +10\r\nPower +5"
-        }
-      },
-      {
-        "EventName": "Dorm Quiz Battle",
-        "EventOptions": {
-          "Bottom Option": "Unyielding Spirit hint +1"
-        }
-      },
-      {
-        "EventName": "The Work of a Model",
-        "EventOptions": {
-          "Top Option": "Energy -15\r\nSkill points +40"
-        }
-      },
-      {
-        "EventName": "The Work of a Model",
-        "EventOptions": {
-          "Bottom Option": "Mood +1\r\n1 random stat +10"
-        }
-      },
-      {
-        "EventName": "A Delicious Trap?",
-        "EventOptions": {
-          "Top Option": "Energy +10\r\nSkill points +5"
-        }
-      },
-      {
-        "EventName": "A Delicious Trap?",
-        "EventOptions": {
-          "Bottom Option": "Randomly either (~90%)\r\nEnergy +30\r\nSkill points +10\r\nor (~10%)\r\nEnergy +30\r\nSkill points +10\r\nSpeed -5\r\nPower +5\r\nGet Slow Metabolism status"
-        }
-      },
-      {
-        "EventName": "Might as Well",
-        "EventOptions": {
-          "Top Option": "Wit +10"
-        }
-      },
-      {
-        "EventName": "Might as Well",
-        "EventOptions": {
-          "Bottom Option": "Speed +5\r\nSkill points +15"
-        }
-      },
-      {
-        "EventName": "Words Unspoken",
-        "EventOptions": {
-          "Top Option": "Stamina +5\r\nPower +5"
-        }
-      },
-      {
-        "EventName": "Words Unspoken",
-        "EventOptions": {
-          "Bottom Option": "Guts +10"
-        }
-      },
-      {
-        "EventName": "Barefoot",
-        "EventOptions": {
-          "Top Option": "Stamina +10"
-        }
-      },
-      {
-        "EventName": "Barefoot",
-        "EventOptions": {
-          "Middle Option": "Speed +10"
-        }
-      },
-      {
-        "EventName": "Barefoot",
-        "EventOptions": {
-          "Bottom Option": "Power +10"
-        }
-      },
-      {
-        "EventName": "Wanderlust",
-        "EventOptions": {
-          "Top Option": "Stamina +10"
-        }
-      },
-      {
-        "EventName": "Wanderlust",
-        "EventOptions": {
-          "Bottom Option": "Speed +10"
-        }
-      },
-      {
-        "EventName": "Yoga Pose!",
-        "EventOptions": {
-          "Top Option": "Guts +10"
-        }
-      },
-      {
-        "EventName": "Yoga Pose!",
-        "EventOptions": {
-          "Bottom Option": "Power +10"
-        }
-      },
-      {
-        "EventName": "Bonus at start",
-        "EventOptions": {
-          "": "Skill points +120"
-        }
-      },
-      {
-        "EventName": "Failed training (Get Well Soon!)",
-        "EventOptions": {
-          "Top Option": "Mood -1\r\nLast trained stat -5\r\n(random) Get Practice Poor status"
-        }
-      },
-      {
-        "EventName": "Failed training (Get Well Soon!)",
-        "EventOptions": {
-          "Bottom Option": "Randomly either\r\nMood -1\r\nLast trained stat -10\r\n(random) Get Practice Poor status\r\nor\r\nGet Practice Perfect ○ status"
-        }
-      },
-      {
-        "EventName": "Failed training (Don't Overdo It!)",
-        "EventOptions": {
-          "Top Option": "Energy +10\r\nMood -2\r\nLast trained stat -10\r\n2 random stats -10\r\n(random) Get Practice Poor status"
-        }
-      },
-      {
-        "EventName": "Failed training (Don't Overdo It!)",
-        "EventOptions": {
-          "Bottom Option": "Randomly either\r\nMood -3\r\nLast trained stat -10\r\n2 random stats -10\r\nGet Practice Poor status\r\nor\r\nEnergy +10\r\nGet Practice Perfect ○ status"
-        }
-      },
-      {
-        "EventName": "Extra Training",
-        "EventOptions": {
-          "Top Option": "Energy -5\r\nLast trained stat +5\r\n(random) Heal a negative status effect\r\nYayoi Akikawa bond +5"
-        }
-      },
-      {
-        "EventName": "Extra Training",
-        "EventOptions": {
-          "Bottom Option": "Energy +5"
-        }
-      },
-      {
-        "EventName": "At Summer Camp (Year 2)",
-        "EventOptions": {
-          "Top Option": "Power +10"
-        }
-      },
-      {
-        "EventName": "At Summer Camp (Year 2)",
-        "EventOptions": {
-          "Bottom Option": "Guts +10"
-        }
-      },
-      {
-        "EventName": "Fan Letter",
-        "EventOptions": {
-          "": "Mood +1\r\nSkill points +30"
-        }
-      },
-      {
-        "EventName": "Dance Lesson",
-        "EventOptions": {
-          "Top Option": "Guts +10"
-        }
-      },
-      {
-        "EventName": "Dance Lesson",
-        "EventOptions": {
-          "Bottom Option": "Wit +10"
-        }
-      },
-      {
-        "EventName": "New Year's Resolutions",
-        "EventOptions": {
-          "Top Option": "Speed +10"
-        }
-      },
-      {
-        "EventName": "New Year's Resolutions",
-        "EventOptions": {
-          "Middle Option": "Energy +20"
-        }
-      },
-      {
-        "EventName": "New Year's Resolutions",
-        "EventOptions": {
-          "Bottom Option": "Skill points +20"
-        }
-      },
-      {
-        "EventName": "New Year's Shrine Visit",
-        "EventOptions": {
-          "Top Option": "Energy +30"
-        }
-      },
-      {
-        "EventName": "New Year's Shrine Visit",
-        "EventOptions": {
-          "Middle Option": "All stats +5"
-        }
-      },
-      {
-        "EventName": "New Year's Shrine Visit",
-        "EventOptions": {
-          "Bottom Option": "Skill points +35"
-        }
-      },
-      {
-        "EventName": "Acupuncture (Just an Acupuncturist, No Worries! ☆)",
-        "EventOptions": {
-          "Option 1": "Randomly either (~30%)\r\nAll stats +20\r\nor (~70%)\r\nMood -2\r\nAll stats -15\r\nGet Night Owl status"
-        }
-      },
-      {
-        "EventName": "Acupuncture (Just an Acupuncturist, No Worries! ☆)",
-        "EventOptions": {
-          "Option 2": "Randomly either (~45%)\r\nObtain Corner Recovery ○ skill\r\nObtain Straightaway Recovery skill\r\nor (~55%)\r\nEnergy -20\r\nMood -2"
-        }
-      },
-      {
-        "EventName": "Acupuncture (Just an Acupuncturist, No Worries! ☆)",
-        "EventOptions": {
-          "Option 3": "Randomly either (~70%)\r\nMaximum Energy +12\r\nEnergy +40\r\nHeal all negative status effects\r\nor (~30%)\r\nEnergy -20\r\nMood -2\r\nGet Practice Poor status"
-        }
-      },
-      {
-        "EventName": "Acupuncture (Just an Acupuncturist, No Worries! ☆)",
-        "EventOptions": {
-          "Option 4": "Randomly either (~85%)\r\nEnergy +20\r\nMood +1\r\nGet Charming ○ status\r\nor (~15%)\r\nEnergy -10/-20\r\nMood -1\r\n(random) Get Practice Poor status"
-        }
-      },
-      {
-        "EventName": "Acupuncture (Just an Acupuncturist, No Worries! ☆)",
-        "EventOptions": {
-          "Option 5": "Energy +10"
-        }
-      },
-      {
-        "EventName": "Victory! (G1)",
-        "EventOptions": {
-          "Top Option": "Energy -15\r\n1 random stat +10\r\nSkill points +45\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Victory! (G1)",
-        "EventOptions": {
-          "Bottom Option": "Energy -5/-20\r\n1 random stat +10\r\nSkill points +45\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Victory! (G2/G3)",
-        "EventOptions": {
-          "Top Option": "Energy -15\r\n1 random stat +8\r\nSkill points +35\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Victory! (G2/G3)",
-        "EventOptions": {
-          "Bottom Option": "Energy -5/-20\r\n1 random stat +8\r\nSkill points +35\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Victory! (Pre/OP)",
-        "EventOptions": {
-          "Top Option": "Energy -15\r\n1 random stat +5\r\nSkill points +30\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Victory! (Pre/OP)",
-        "EventOptions": {
-          "Bottom Option": "Energy -5/-20\r\n1 random stat +5\r\nSkill points +30\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Solid Showing (G1)",
-        "EventOptions": {
-          "Top Option": "Energy -20\r\n1 random stat +8\r\nSkill points +45\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Solid Showing (G1)",
-        "EventOptions": {
-          "Bottom Option": "Energy -10/-30\r\n1 random stat +8\r\nSkill points +45\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Solid Showing (G2/G3)",
-        "EventOptions": {
-          "Top Option": "Energy -20\r\n1 random stat +5\r\nSkill points +35\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Solid Showing (G2/G3)",
-        "EventOptions": {
-          "Bottom Option": "Energy -10/-30\r\n1 random stat +5\r\nSkill points +35\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Solid Showing (Pre/OP)",
-        "EventOptions": {
-          "Top Option": "Energy -20\r\n1 random stat +3\r\nSkill points +30\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Solid Showing (Pre/OP)",
-        "EventOptions": {
-          "Bottom Option": "Energy -10/-30\r\n1 random stat +3\r\nSkill points +30\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Defeat (G1)",
-        "EventOptions": {
-          "Top Option": "Energy -25\r\n1 random stat +4\r\nSkill points +25\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Defeat (G1)",
-        "EventOptions": {
-          "Bottom Option": "Energy -15/-35\r\n1 random stat +4\r\nSkill points +25\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Defeat (G2/G3)",
-        "EventOptions": {
-          "Top Option": "Energy -25\r\n1 random stat +3\r\nSkill points +20\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Defeat (G2/G3)",
-        "EventOptions": {
-          "Bottom Option": "Energy -15/-35\r\n1 random stat +3\r\nSkill points +20\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Defeat (Pre/OP)",
-        "EventOptions": {
-          "Top Option": "Energy -25\r\nSkill points +10\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Defeat (Pre/OP)",
-        "EventOptions": {
-          "Bottom Option": "Energy -15/-35\r\nSkill points +10\r\n(random) Hint for a skill related to the race"
-        }
-      },
-      {
-        "EventName": "Etsuko's Elated Coverage (G1)",
-        "EventOptions": {
-          "": "Energy -15\r\nMood +1\r\n1 random stat +10\r\nSkill points +45\r\nFans +500\r\n(random) Hint for a skill related to the race\r\nEtsuko Otonashi bond +15"
-        }
-      },
-      {
-        "EventName": "Etsuko's Elated Coverage (G2/G3)",
-        "EventOptions": {
-          "": "Energy -15\r\nMood +1\r\n1 random stat +8\r\nSkill points +35\r\nFans +500\r\n(random) Hint for a skill related to the race\r\nEtsuko Otonashi bond +15"
-        }
-      },
-      {
-        "EventName": "Etsuko's Elated Coverage (Pre/OP)",
-        "EventOptions": {
-          "": "Energy -15\r\nMood +1\r\n1 random stat +5\r\nSkill points +30\r\nFans +500\r\n(random) Hint for a skill related to the race\r\nEtsuko Otonashi bond +15"
-        }
-      },
-      {
-        "EventName": "Etsuko's Exhaustive Coverage (G1)",
-        "EventOptions": {
-          "Top Option": "Randomly either\r\nEnergy -25\r\nMood -1\r\n1 random stat +4\r\nSkill points +25\r\nEtsuko Otonashi bond -10\r\nor\r\nEnergy -15\r\nMood +1\r\n1 random stat +4\r\nSkill points +25\r\nEtsuko Otonashi bond +15"
-        }
-      },
-      {
-        "EventName": "Etsuko's Exhaustive Coverage (G1)",
-        "EventOptions": {
-          "Bottom Option": "Energy -20\r\n1 random stat +4\r\nSkill points +25\r\nEtsuko Otonashi bond +10"
-        }
-      },
-      {
-        "EventName": "Etsuko's Exhaustive Coverage (G2/G3)",
-        "EventOptions": {
-          "Top Option": "Randomly either\r\nEnergy -25\r\nMood -1\r\n1 random stat +3\r\nSkill points +20\r\nEtsuko Otonashi bond -10\r\nor\r\nEnergy -15\r\nMood +1\r\n1 random stat +3\r\nSkill points +20\r\nEtsuko Otonashi bond +15"
-        }
-      },
-      {
-        "EventName": "Etsuko's Exhaustive Coverage (G2/G3)",
-        "EventOptions": {
-          "Bottom Option": "Energy -20\r\n1 random stat +3\r\nSkill points +20\r\nEtsuko Otonashi bond +10"
-        }
-      },
-      {
-        "EventName": "Etsuko's Exhaustive Coverage (Pre/OP)",
-        "EventOptions": {
-          "Top Option": "Randomly either\r\nEnergy -25\r\nMood -1\r\nSkill points +10\r\nEtsuko Otonashi bond -10\r\nor\r\nEnergy -15\r\nMood +1\r\nSkill points +10\r\nEtsuko Otonashi bond +15"
-        }
-      },
-      {
-        "EventName": "Etsuko's Exhaustive Coverage (Pre/OP)",
-        "EventOptions": {
-          "Bottom Option": "Energy -20\r\nSkill points +10\r\nEtsuko Otonashi bond +10"
-        }
-      },
-      {
-        "EventName": "Trust and Awkward Smiles",
-        "EventOptions": {
-          "": "Speed +5"
-        }
-      },
-      {
-        "EventName": "Support and Expectations",
-        "EventOptions": {
-          "": "Power +5"
-        }
-      },
-      {
-        "EventName": "Anger and Frustration",
-        "EventOptions": {
-          "": "Guts +5"
-        }
-      },
-      {
-        "EventName": "Exaltation and Impatience",
-        "EventOptions": {
-          "": "Speed +5"
-        }
-      },
-      {
-        "EventName": "Empty",
-        "EventOptions": {
-          "": "Stamina +5"
-        }
-      },
-      {
-        "EventName": "Golden Sunset",
-        "EventOptions": {
-          "": "Wit +5"
-        }
-      },
-      {
-        "EventName": "Boba Trap",
-        "EventOptions": {
-          "": "Stamina -5\r\nMood -1"
-        }
-      },
-      {
-        "EventName": "I Overslept!",
-        "EventOptions": {
-          "": "Energy +25\r\nHeal a negative status effect\r\n4 random types of training will be disabled for one turn"
-        }
-      },
-      {
-        "EventName": "Master Trainer",
-        "EventOptions": {
-          "": "Speed +10\r\n(random) Get Practice Perfect ○ status"
-        }
-      },
-      {
-        "EventName": "Running Toward the Light",
-        "EventOptions": {
-          "": "All stats +5\r\nSkill points +5"
-        }
-      },
-      {
-        "EventName": "The Road Home",
-        "EventOptions": {
-          "": "Mood -1"
-        }
-      },
-      {
-        "EventName": "A Taxing Photo Shoot",
-        "EventOptions": {
-          "": "Energy -10\r\nMood -1"
-        }
-      },
-      {
-        "EventName": "Learn from the Runway",
-        "EventOptions": {
-          "": "All stats +5\r\nSkill points +30\r\nMood +2\r\n(random) Get Fast Learner status"
-        }
-      },
-      {
-        "EventName": "Early Morning Shoot",
-        "EventOptions": {
-          "": "Randomly either\r\nEnergy +15\r\nMood -1\r\nGuts -5\r\nor\r\nEnergy +15\r\nGuts -5\r\nGet Slacker status\r\nor\r\nEnergy +15\r\nMood -1\r\nGuts -5\r\nGet Slacker status"
-        }
-      }
-    ]
+    "UmaEvents": []
   },
   {
     "UmaName": "Grass Wonder",

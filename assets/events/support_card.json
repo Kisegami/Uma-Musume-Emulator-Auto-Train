@@ -1,5 +1,155 @@
 ﻿[
   {
+    "EventName": "(❯) Fickle Genius Magical Girl Sweepy ☆",
+    "EventOptions": {
+      "Top Option": "Randomly either\r\nMood +1\r\nStraightaway Spurt hint +2\r\nSweep Tosho bond +5\r\nor\r\nMood -1\r\nWit +5\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "(❯) Fickle Genius Magical Girl Sweepy ☆",
+    "EventOptions": {
+      "Bottom Option": "Skill points +15\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "(❯❯) A Drop of Black Magic ☆",
+    "EventOptions": {
+      "Top Option": "Randomly either\r\nEnergy +10\r\nSkill points +20\r\nSweep Tosho bond +5\r\nor\r\nEnergy -10\r\nSkill points +15\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "(❯❯) A Drop of Black Magic ☆",
+    "EventOptions": {
+      "Bottom Option": "Wit +10\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "(❯❯❯) Her Mood Like a Flower ☆",
+    "EventOptions": {
+      "": "Speed +5\r\nWit +5\r\nCrusader hint +1"
+    }
+  },
+  {
+    "EventName": "Miracle ☆ Escape!",
+    "EventOptions": {
+      "Top Option": "Energy +10\r\nSpeed +5\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "Miracle ☆ Escape!",
+    "EventOptions": {
+      "Bottom Option": "Energy -10\r\nSpeed +20\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "Wonderful ☆ Mistake!",
+    "EventOptions": {
+      "Top Option": "Randomly either\r\nEnergy -15\r\nSkill points +40\r\nor\r\nEnergy -20\r\nSkill points +40\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "Wonderful ☆ Mistake!",
+    "EventOptions": {
+      "Bottom Option": "Get Charming ○ status\r\nSweep Tosho bond +5"
+    }
+  },
+  {
+    "EventName": "(❯) Tickezo☆Expedition!",
+    "EventOptions": {
+      "": "Speed +5\r\nStamina +5"
+    }
+  },
+  {
+    "EventName": "(❯❯) Tickezo☆Friendship!",
+    "EventOptions": {
+      "Top Option": "Stamina +3\r\nGuts +3\r\n1,500,000 CC hint +1\r\nWinning Ticket bond +10"
+    }
+  },
+  {
+    "EventName": "(❯❯) Tickezo☆Friendship!",
+    "EventOptions": {
+      "Bottom Option": "Energy +10\r\nMaverick ○ hint +3\r\nWinning Ticket bond -5\r\nEvent chain ended"
+    }
+  },
+  {
+    "EventName": "(❯❯❯) Tickezo☆Night Fever!",
+    "EventOptions": {
+      "": "Speed +8\r\nStamina +8\r\nGuts +8\r\nHard Worker hint +1"
+    }
+  },
+  {
+    "EventName": "Full-Power Muscles!",
+    "EventOptions": {
+      "Top Option": "Stamina +5\r\nSkill points +15\r\nWinning Ticket bond +5"
+    }
+  },
+  {
+    "EventName": "Full-Power Muscles!",
+    "EventOptions": {
+      "Bottom Option": "Mood +1\r\nSkill points +15\r\nWinning Ticket bond +5"
+    }
+  },
+  {
+    "EventName": "Full-Power Racing!",
+    "EventOptions": {
+      "Top Option": "Late Surger Corners ○ hint +1\r\nWinning Ticket bond +5"
+    }
+  },
+  {
+    "EventName": "Full-Power Racing!",
+    "EventOptions": {
+      "Bottom Option": "Skill points +30\r\nWinning Ticket bond +5"
+    }
+  },
+  {
+    "EventName": "(❯) Number One Reactions?",
+    "EventOptions": {
+      "Top Option": "Speed +3\r\nPower +3\r\nWit +3\r\nDaiwa Scarlet bond +5"
+    }
+  },
+  {
+    "EventName": "(❯) Number One Reactions?",
+    "EventOptions": {
+      "Bottom Option": "Energy +15\r\nEvent chain ended"
+    }
+  },
+  {
+    "EventName": "(❯❯) Learning to Look Scared",
+    "EventOptions": {
+      "": "Power +5\r\nWit +5"
+    }
+  },
+  {
+    "EventName": "(❯❯❯) Poolside Fun",
+    "EventOptions": {
+      "": "Randomly either\r\nEnergy -5\r\nPower +10\r\nRace Planner hint +3\r\nor\r\nEnergy -5\r\nPower +5\r\nPreferred Position hint +3"
+    }
+  },
+  {
+    "EventName": "I'm Going to Win Tomorrow!",
+    "EventOptions": {
+      "Top Option": "Wit +10\r\nDaiwa Scarlet bond +5"
+    }
+  },
+  {
+    "EventName": "I'm Going to Win Tomorrow!",
+    "EventOptions": {
+      "Bottom Option": "Mood +1\r\nSkill points +15\r\nDaiwa Scarlet bond +5"
+    }
+  },
+  {
+    "EventName": "This Is Nothing!",
+    "EventOptions": {
+      "Top Option": "Stamina to Spare hint +1\r\nDaiwa Scarlet bond +5"
+    }
+  },
+  {
+    "EventName": "This Is Nothing!",
+    "EventOptions": {
+      "Bottom Option": "Energy +20\r\nMood +1\r\nDaiwa Scarlet bond +5"
+    }
+  },
+  {
     "EventName": "(❯) Brian, the Race Planner",
     "EventOptions": {
       "": "Maximum Energy +4\r\nSpeed +5"
@@ -5070,93 +5220,93 @@
     }
   },
   {
-    "EventName": "(❯) Gotta Follow My Heart",
+    "EventName": "(❯) Dance in Cleats!",
     "EventOptions": {
-      "": "Power +5\r\nSkill points +15"
+      "": "Speed +5\r\nStamina +5"
     }
   },
   {
-    "EventName": "(❯❯) A Vow to the Setting Sun",
+    "EventName": "(❯❯) A Roller Coaster of Feelings!",
     "EventOptions": {
-      "": "Power +5\r\nSkill points +15"
+      "Top Option": "Energy -10\r\nSpeed +5\r\nStamina +5\r\nGuts +10\r\nSpecial Week bond +5"
     }
   },
   {
-    "EventName": "(❯❯❯) Put That on the Record, Okay?",
+    "EventName": "(❯❯) A Roller Coaster of Feelings!",
     "EventOptions": {
-      "": "Power +5\r\nSkill points +30\r\nBreath of Fresh Air hint +1"
+      "Bottom Option": "Energy +20\r\nWit +10\r\nSpecial Week bond +5\r\nEvent chain ended"
     }
   },
   {
-    "EventName": "The Coolest Line",
+    "EventName": "(❯❯❯) Our Audience",
     "EventOptions": {
-      "Top Option": "Power +10\r\nVodka bond +5"
+      "": "Randomly either\r\nEnergy -10\r\nSpeed +5\r\nStamina +5\r\nGuts +5\r\nHomestretch Haste hint +1\r\nSpecial Week bond +5\r\nor\r\nEnergy -10\r\nSpeed +15\r\nStamina +15\r\nGuts +15\r\nIn Body and Mind hint +3\r\nSpecial Week bond +5"
     }
   },
   {
-    "EventName": "The Coolest Line",
+    "EventName": "Watch Where You're Going!",
     "EventOptions": {
-      "Bottom Option": "Power +5\r\nSkill points +15\r\nVodka bond +5"
+      "Top Option": "Extra Tank hint +1\r\nSpecial Week bond +5"
     }
   },
   {
-    "EventName": "Enemies on Main Street",
+    "EventName": "Watch Where You're Going!",
     "EventOptions": {
-      "Top Option": "Nimble Navigator hint +1\r\nVodka bond +5"
+      "Bottom Option": "Guts +15\r\nSpecial Week bond +5"
     }
   },
   {
-    "EventName": "Enemies on Main Street",
+    "EventName": "So Many Options!",
     "EventOptions": {
-      "Bottom Option": "Power +5\r\nSkill points +15\r\nVodka bond +5"
+      "Top Option": "Energy +10\r\nMood +1\r\nSpecial Week bond +5"
     }
   },
   {
-    "EventName": "(❯) How I Can Help",
+    "EventName": "So Many Options!",
     "EventOptions": {
-      "": "Maximum Energy +4\r\nSkill points +10"
+      "Bottom Option": "Energy -10\r\nStamina +15\r\nSkill points +15\r\nSpecial Week bond +5"
     }
   },
   {
-    "EventName": "(❯❯) Aspiring to Adulthood",
+    "EventName": "(❯) Premonitions of a Performer",
     "EventOptions": {
-      "Top Option": "Energy -10\r\nWit +20\r\nNishino Flower bond +5"
+      "": "Energy +10\r\nSpeed +5"
     }
   },
   {
-    "EventName": "(❯❯) Aspiring to Adulthood",
+    "EventName": "(❯❯) Short Interlude",
     "EventOptions": {
-      "Bottom Option": "Wit +5\r\nSkill points +15"
+      "": "Energy +10\r\nSpeed +5\r\nWit +5"
     }
   },
   {
-    "EventName": "(❯❯❯) What's Important!",
+    "EventName": "(❯❯❯) Legendary Act",
     "EventOptions": {
-      "": "Speed +5\r\nWit +10\r\nBeeline Burst hint +1/+3 or Straightaway Adept hint +1"
+      "": "Energy +10\r\nSpeed +5\r\nRushing Gale! hint +1\r\nTokai Teio bond +5"
     }
   },
   {
-    "EventName": "Warmth, Love, and Lunch",
+    "EventName": "My Way, Or...",
     "EventOptions": {
-      "Top Option": "Get Charming ○ status\r\nNishino Flower bond +5"
+      "Top Option": "Mood +1\r\nSkill points +15\r\nTokai Teio bond +5"
     }
   },
   {
-    "EventName": "Warmth, Love, and Lunch",
+    "EventName": "My Way, Or...",
     "EventOptions": {
-      "Bottom Option": "Energy +20\r\nNishino Flower bond +5"
+      "Bottom Option": "Guts +15\r\nTokai Teio bond +5"
     }
   },
   {
-    "EventName": "Let's Bloom Beautifully ♪",
+    "EventName": "My Weapon",
     "EventOptions": {
-      "Top Option": "Wit +15\r\nNishino Flower bond +5"
+      "Top Option": "Mood +1\r\nGuts +10\r\nTokai Teio bond +5"
     }
   },
   {
-    "EventName": "Let's Bloom Beautifully ♪",
+    "EventName": "My Weapon",
     "EventOptions": {
-      "Bottom Option": "Speed +10\r\nPower +5\r\nNishino Flower bond +5"
+      "Bottom Option": "Pace Chaser Straightaways ○ hint +1\r\nTokai Teio bond +5"
     }
   }
 ]

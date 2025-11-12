@@ -29,6 +29,46 @@ with open("config.json", "r", encoding="utf-8") as config_file:
     config = json.load(config_file)
     DEBUG_MODE = config.get("debug_mode", False)
 
+# Cache for event databases to avoid reloading JSON files
+_event_cache = {
+    "support_card": None,
+    "uma_data": None,
+    "ura_finale": None
+}
+
+def _load_event_databases():
+    """Load all event databases with caching for performance"""
+    global _event_cache
+    
+    # Load Support Card events if not cached
+    if _event_cache["support_card"] is None and os.path.exists("assets/events/support_card.json"):
+        try:
+            with open("assets/events/support_card.json", "r", encoding="utf-8-sig") as f:
+                _event_cache["support_card"] = json.load(f)
+        except Exception as e:
+            log_warning(f"Error loading support_card.json: {e}")
+            _event_cache["support_card"] = []
+    
+    # Load Uma Data events if not cached
+    if _event_cache["uma_data"] is None and os.path.exists("assets/events/uma_data.json"):
+        try:
+            with open("assets/events/uma_data.json", "r", encoding="utf-8-sig") as f:
+                _event_cache["uma_data"] = json.load(f)
+        except Exception as e:
+            log_warning(f"Error loading uma_data.json: {e}")
+            _event_cache["uma_data"] = []
+    
+    # Load Ura Finale events if not cached
+    if _event_cache["ura_finale"] is None and os.path.exists("assets/events/ura_finale.json"):
+        try:
+            with open("assets/events/ura_finale.json", "r", encoding="utf-8-sig") as f:
+                _event_cache["ura_finale"] = json.load(f)
+        except Exception as e:
+            log_warning(f"Error loading ura_finale.json: {e}")
+            _event_cache["ura_finale"] = []
+    
+    return _event_cache
+
  
 
 def count_event_choices():
@@ -224,98 +264,150 @@ def analyze_event_options(options, priorities):
     }
 
 def search_events_exact(event_name):
-    """Search for exact event name match in all databases"""
+    """Search for exact event name match in all databases (cached)"""
     results = {}
+    cache = _load_event_databases()
+    
     # Support Card
-    if os.path.exists("assets/events/support_card.json"):
-        with open("assets/events/support_card.json", "r", encoding="utf-8-sig") as f:
-            for ev in json.load(f):
-                if ev.get("EventName") == event_name:
-                    entry = results.setdefault(event_name, {"source": "Support Card", "options": {}})
-                    # Merge options across duplicate entries of the same event
-                    entry["options"].update(ev.get("EventOptions", {}))
+    if cache["support_card"]:
+        for ev in cache["support_card"]:
+            if ev.get("EventName") == event_name:
+                entry = results.setdefault(event_name, {"source": "Support Card", "options": {}})
+                entry["options"].update(ev.get("EventOptions", {}))
+    
     # Uma Data
-    if os.path.exists("assets/events/uma_data.json"):
-        with open("assets/events/uma_data.json", "r", encoding="utf-8-sig") as f:
-            for character in json.load(f):
-                for ev in character.get("UmaEvents", []):
-                    if ev.get("EventName") == event_name:
-                        entry = results.setdefault(event_name, {"source": "Uma Data", "options": {}})
-                        # Merge source labels
-                        if entry["source"] == "Support Card":
-                            entry["source"] = "Both"
-                        elif entry["source"].startswith("Support Card +"):
-                            entry["source"] = entry["source"].replace("Support Card +", "Both +")
-                        entry["options"].update(ev.get("EventOptions", {}))
-    # Ura Finale
-    if os.path.exists("assets/events/ura_finale.json"):
-        with open("assets/events/ura_finale.json", "r", encoding="utf-8-sig") as f:
-            for ev in json.load(f):
+    if cache["uma_data"]:
+        for character in cache["uma_data"]:
+            for ev in character.get("UmaEvents", []):
                 if ev.get("EventName") == event_name:
-                    entry = results.setdefault(event_name, {"source": "Ura Finale", "options": {}})
+                    entry = results.setdefault(event_name, {"source": "Uma Data", "options": {}})
                     if entry["source"] == "Support Card":
-                        entry["source"] = "Support Card + Ura Finale"
-                    elif entry["source"] == "Uma Data":
-                        entry["source"] = "Uma Data + Ura Finale"
-                    elif entry["source"] == "Both":
-                        entry["source"] = "All Sources"
+                        entry["source"] = "Both"
+                    elif entry["source"].startswith("Support Card +"):
+                        entry["source"] = entry["source"].replace("Support Card +", "Both +")
                     entry["options"].update(ev.get("EventOptions", {}))
+    
+    # Ura Finale
+    if cache["ura_finale"]:
+        for ev in cache["ura_finale"]:
+            if ev.get("EventName") == event_name:
+                entry = results.setdefault(event_name, {"source": "Ura Finale", "options": {}})
+                if entry["source"] == "Support Card":
+                    entry["source"] = "Support Card + Ura Finale"
+                elif entry["source"] == "Uma Data":
+                    entry["source"] = "Uma Data + Ura Finale"
+                elif entry["source"] == "Both":
+                    entry["source"] = "All Sources"
+                entry["options"].update(ev.get("EventOptions", {}))
+    
     return results
 
 def search_events_fuzzy(event_name):
-    """Search for fuzzy event name match in all databases (fallback)"""
-    results = {}
+    """Search for fuzzy event name match in all databases (cached, optimized)
+    
+    Uses improved matching that prioritizes:
+    1. Events that start with the OCR text
+    2. Events where OCR text is a complete word
+    3. Substring matches (deprioritized)
+    """
+    exact_matches = {}  # For events starting with OCR text
+    word_matches = {}   # For events where OCR is a complete word
+    loose_matches = {}  # For substring matches (deprioritized)
+    
     event_name_lower = event_name.lower().strip()
+    cache = _load_event_databases()
     
-    # Support Card
-    if os.path.exists("assets/events/support_card.json"):
-        with open("assets/events/support_card.json", "r", encoding="utf-8-sig") as f:
-            for ev in json.load(f):
+    def categorize_match(db_name, db_name_lower):
+        """Categorize how well the event name matches"""
+        # Exact match at start (highest priority)
+        if db_name_lower.startswith(event_name_lower):
+            return "exact"
+        
+        # Check if OCR text is a complete word in the database name
+        db_words = re.split(r'[\s\!\?\(\)\[\]\-\>\<\,\.]', db_name_lower)
+        db_words = [w for w in db_words if w]
+        
+        for word in db_words:
+            if word == event_name_lower:  # Complete word match
+                return "word"
+            if word.startswith(event_name_lower) and len(event_name_lower) >= 3:
+                return "word"
+        
+        # Substring match (lowest priority)
+        if len(event_name_lower) >= 5 and event_name_lower in db_name_lower:
+            return "loose"
+        
+        return None
+    
+    # Process Support Card events
+    if cache["support_card"]:
+        for ev in cache["support_card"]:
+            db_name = ev.get("EventName", "")
+            if not db_name:
+                continue
+            db_name_lower = db_name.lower().strip()
+            
+            match_type = categorize_match(db_name, db_name_lower)
+            if match_type == "exact":
+                entry = exact_matches.setdefault(db_name, {"source": "Support Card", "options": {}})
+                entry["options"].update(ev.get("EventOptions", {}))
+            elif match_type == "word":
+                entry = word_matches.setdefault(db_name, {"source": "Support Card", "options": {}})
+                entry["options"].update(ev.get("EventOptions", {}))
+            elif match_type == "loose":
+                entry = loose_matches.setdefault(db_name, {"source": "Support Card", "options": {}})
+                entry["options"].update(ev.get("EventOptions", {}))
+    
+    # Process Uma Data events
+    if cache["uma_data"]:
+        for character in cache["uma_data"]:
+            for ev in character.get("UmaEvents", []):
                 db_name = ev.get("EventName", "")
+                if not db_name:
+                    continue
                 db_name_lower = db_name.lower().strip()
                 
-                # Check if OCR text is contained in database name
-                if event_name_lower in db_name_lower or db_name_lower in event_name_lower:
-                    entry = results.setdefault(db_name, {"source": "Support Card", "options": {}})
-                    entry["options"].update(ev.get("EventOptions", {}))
-    
-    # Uma Data
-    if os.path.exists("assets/events/uma_data.json"):
-        with open("assets/events/uma_data.json", "r", encoding="utf-8-sig") as f:
-            for character in json.load(f):
-                for ev in character.get("UmaEvents", []):
-                    db_name = ev.get("EventName", "")
-                    db_name_lower = db_name.lower().strip()
-                    
-                    # Check if OCR text is contained in database name
-                    if event_name_lower in db_name_lower or db_name_lower in event_name_lower:
-                        entry = results.setdefault(db_name, {"source": "Uma Data", "options": {}})
-                        # Merge source labels
-                        if entry["source"] == "Support Card":
-                            entry["source"] = "Both"
-                        elif entry["source"].startswith("Support Card +"):
-                            entry["source"] = entry["source"].replace("Support Card +", "Both +")
-                        entry["options"].update(ev.get("EventOptions", {}))
-    
-    # Ura Finale
-    if os.path.exists("assets/events/ura_finale.json"):
-        with open("assets/events/ura_finale.json", "r", encoding="utf-8-sig") as f:
-            for ev in json.load(f):
-                db_name = ev.get("EventName", "")
-                db_name_lower = db_name.lower().strip()
+                match_type = categorize_match(db_name, db_name_lower)
+                target_dict = exact_matches if match_type == "exact" else (word_matches if match_type == "word" else (loose_matches if match_type == "loose" else None))
                 
-                # Check if OCR text is contained in database name
-                if event_name_lower in db_name_lower or db_name_lower in event_name_lower:
-                    entry = results.setdefault(db_name, {"source": "Ura Finale", "options": {}})
+                if target_dict is not None:
+                    entry = target_dict.setdefault(db_name, {"source": "Uma Data", "options": {}})
                     if entry["source"] == "Support Card":
-                        entry["source"] = "Support Card + Ura Finale"
-                    elif entry["source"] == "Uma Data":
-                        entry["source"] = "Uma Data + Ura Finale"
-                    elif entry["source"] == "Both":
-                        entry["source"] = "All Sources"
+                        entry["source"] = "Both"
+                    elif entry["source"].startswith("Support Card +"):
+                        entry["source"] = entry["source"].replace("Support Card +", "Both +")
                     entry["options"].update(ev.get("EventOptions", {}))
     
-    return results
+    # Process Ura Finale events
+    if cache["ura_finale"]:
+        for ev in cache["ura_finale"]:
+            db_name = ev.get("EventName", "")
+            if not db_name:
+                continue
+            db_name_lower = db_name.lower().strip()
+            
+            match_type = categorize_match(db_name, db_name_lower)
+            target_dict = exact_matches if match_type == "exact" else (word_matches if match_type == "word" else (loose_matches if match_type == "loose" else None))
+            
+            if target_dict is not None:
+                entry = target_dict.setdefault(db_name, {"source": "Ura Finale", "options": {}})
+                if entry["source"] == "Support Card":
+                    entry["source"] = "Support Card + Ura Finale"
+                elif entry["source"] == "Uma Data":
+                    entry["source"] = "Uma Data + Ura Finale"
+                elif entry["source"] == "Both":
+                    entry["source"] = "All Sources"
+                entry["options"].update(ev.get("EventOptions", {}))
+    
+    # Return in priority order
+    if exact_matches:
+        return exact_matches
+    elif word_matches:
+        return word_matches
+    elif loose_matches:
+        return loose_matches
+    
+    return {}
 
 def handle_event_choice():
     """
@@ -349,50 +441,21 @@ def handle_event_choice():
         
         if not event_name:
             log_error(f"❌ EVENT DETECTION FAILED: No text detected in event region")
+            
+            # Save debug image for analysis
+            debug_filename = f"debug_event_detection_failure_{int(time.time())}.png"
+            event_image.save(debug_filename)
+            log_error(f"❌ Debug image saved to: {debug_filename}")
+            log_error(f"❌ Event region coordinates: {event_region}")
+            log_error(f"❌ Image size: {event_image.size}")
+            log_error(f"❌ Check the OCR logs above for what text was detected (if any)")
             log_error(f"❌ BOT STOPPED - Please check the event screen and OCR configuration")
+            
             raise RuntimeError("Event detection failed: No text detected in event region. Bot stopped.")
         
         log_info(f"Event found: {event_name}")
 
-        # Prefer exact name lookup to ensure options align with the specific event instance
-        def search_events_exact(name):
-            results = {}
-            # Support Card
-            if os.path.exists("assets/events/support_card.json"):
-                with open("assets/events/support_card.json", "r", encoding="utf-8-sig") as f:
-                    for ev in json.load(f):
-                        if ev.get("EventName") == name:
-                            entry = results.setdefault(name, {"source": "Support Card", "options": {}})
-                            # Merge options across duplicate entries of the same event
-                            entry["options"].update(ev.get("EventOptions", {}))
-            # Uma Data
-            if os.path.exists("assets/events/uma_data.json"):
-                with open("assets/events/uma_data.json", "r", encoding="utf-8-sig") as f:
-                    for character in json.load(f):
-                        for ev in character.get("UmaEvents", []):
-                            if ev.get("EventName") == name:
-                                entry = results.setdefault(name, {"source": "Uma Data", "options": {}})
-                                # Merge source labels
-                                if entry["source"] == "Support Card":
-                                    entry["source"] = "Both"
-                                elif entry["source"].startswith("Support Card +"):
-                                    entry["source"] = entry["source"].replace("Support Card +", "Both +")
-                                entry["options"].update(ev.get("EventOptions", {}))
-            # Ura Finale
-            if os.path.exists("assets/events/ura_finale.json"):
-                with open("assets/events/ura_finale.json", "r", encoding="utf-8-sig") as f:
-                    for ev in json.load(f):
-                        if ev.get("EventName") == name:
-                            entry = results.setdefault(name, {"source": "Ura Finale", "options": {}})
-                            if entry["source"] == "Support Card":
-                                entry["source"] = "Support Card + Ura Finale"
-                            elif entry["source"] == "Uma Data":
-                                entry["source"] = "Uma Data + Ura Finale"
-                            elif entry["source"] == "Both":
-                                entry["source"] = "All Sources"
-                            entry["options"].update(ev.get("EventOptions", {}))
-            return results
-
+        # Search for event in database
         found_events = search_events_exact(event_name)
         if not found_events:
             # Fallback to fuzzy search for partial matches
@@ -484,9 +547,15 @@ def handle_event_choice():
             return 1, False, choice_locations  # Default to first choice for unknown events
     
     except Exception as e:
-        # Handle Unicode characters in error messages gracefully
+        # Check if this is a critical event detection failure that should stop the bot
+        error_msg = str(e)
+        if "Event detection failed" in error_msg:
+            # Re-raise the error to stop the bot completely
+            log_error(f"❌ Critical event detection failure - stopping bot execution")
+            raise  # Re-raise the original exception to stop execution
+        
+        # Handle other errors gracefully with fallback
         try:
-            error_msg = str(e)
             log_info(f"Error during event handling: {error_msg}")
         except UnicodeEncodeError:
             # Fallback: print error without problematic characters
@@ -497,6 +566,8 @@ def handle_event_choice():
             _, fallback_locations = count_event_choices()
         except Exception:
             fallback_locations = []
+        
+        log_warning(f"Event analysis failed, falling back to top choice")
         return 1, False, fallback_locations  # Default to first choice on error
 
 def click_event_choice(choice_number, choice_locations=None):
