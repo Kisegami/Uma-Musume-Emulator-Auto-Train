@@ -76,7 +76,7 @@ def remove_overlapping_rectangles(rectangles, overlap_threshold=0.5):
     return result
 
 
-def perform_swipe(start_x, start_y, end_x, end_y, duration=1000):
+def perform_swipe(start_x, start_y, end_x, end_y, duration=1034):
     """
     Perform smooth swipe gesture using ADB.
     
