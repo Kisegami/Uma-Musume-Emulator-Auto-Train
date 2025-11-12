@@ -314,8 +314,8 @@ def check_strategy_before_race(region=(660, 974, 378, 120)) -> bool:
         
         if change_strategy_before_race(expected_strategy):
             # Recheck after change
-            new_strategy, new_matches = check_strategy_before_race(region)
-            if new_matches:
+            strategy_changed = check_strategy_before_race(region)
+            if strategy_changed:
                 log_debug(f"Strategy successfully changed")
                 return True
             else:

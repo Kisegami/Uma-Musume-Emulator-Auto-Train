@@ -441,7 +441,16 @@ def handle_event_choice():
         
         if not event_name:
             log_error(f"❌ EVENT DETECTION FAILED: No text detected in event region")
+            
+            # Save debug image for analysis
+            debug_filename = f"debug_event_detection_failure_{int(time.time())}.png"
+            event_image.save(debug_filename)
+            log_error(f"❌ Debug image saved to: {debug_filename}")
+            log_error(f"❌ Event region coordinates: {event_region}")
+            log_error(f"❌ Image size: {event_image.size}")
+            log_error(f"❌ Check the OCR logs above for what text was detected (if any)")
             log_error(f"❌ BOT STOPPED - Please check the event screen and OCR configuration")
+            
             raise RuntimeError("Event detection failed: No text detected in event region. Bot stopped.")
         
         log_info(f"Event found: {event_name}")
@@ -538,9 +547,15 @@ def handle_event_choice():
             return 1, False, choice_locations  # Default to first choice for unknown events
     
     except Exception as e:
-        # Handle Unicode characters in error messages gracefully
+        # Check if this is a critical event detection failure that should stop the bot
+        error_msg = str(e)
+        if "Event detection failed" in error_msg:
+            # Re-raise the error to stop the bot completely
+            log_error(f"❌ Critical event detection failure - stopping bot execution")
+            raise  # Re-raise the original exception to stop execution
+        
+        # Handle other errors gracefully with fallback
         try:
-            error_msg = str(e)
             log_info(f"Error during event handling: {error_msg}")
         except UnicodeEncodeError:
             # Fallback: print error without problematic characters
@@ -551,6 +566,8 @@ def handle_event_choice():
             _, fallback_locations = count_event_choices()
         except Exception:
             fallback_locations = []
+        
+        log_warning(f"Event analysis failed, falling back to top choice")
         return 1, False, fallback_locations  # Default to first choice on error
 
 def click_event_choice(choice_number, choice_locations=None):

@@ -272,7 +272,8 @@ def extract_event_name_text(pil_img: Image.Image) -> str:
             gray = img_np
 
         # White specialization - find bright pixels (white text)
-        _, cleaned = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+        # Optimized threshold of 180 based on testing for better text detection
+        _, cleaned = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
 
         # Clean up text with morphological operations
         kernel = np.ones((1,1), np.uint8)
@@ -281,22 +282,41 @@ def extract_event_name_text(pil_img: Image.Image) -> str:
         # OCR with confidence filtering
         data = pytesseract.image_to_data(cleaned, config="-c preserve_interword_spaces=1", lang='eng', output_type=pytesseract.Output.DICT)
         
+        # Log ALL detected text for debugging (even low confidence)
+        all_words = []
         high_confidence_words = []
         for i in range(len(data['text'])):
             word = data['text'][i].strip()
             conf = int(data['conf'][i])
-            if word and conf >= 80:
-                high_confidence_words.append(word)
+            if word:  # Any detected word
+                all_words.append(f"{word}({conf})")
+                if conf >= 80:
+                    high_confidence_words.append(word)
+        
+        # Always log what OCR detected, even if confidence is low
+        if all_words:
+            log_debug(f"Event name ALL OCR detections: {' '.join(all_words)}")
+        else:
+            log_debug(f"Event name OCR: No text detected at all")
         
         result_text = ' '.join(high_confidence_words).strip()
         
         # Log raw OCR result BEFORE database matching
         if result_text:
-            log_debug(f"Event name RAW OCR: '{result_text}'")
+            log_debug(f"Event name HIGH-CONFIDENCE OCR: '{result_text}'")
             # Apply database matching (handles all post-processing internally)
             matched_text = find_best_event_match(result_text)
             log_debug(f"Event name MATCHED: '{matched_text}'")
             return matched_text
+        else:
+            log_debug(f"Event name: No high-confidence text found (threshold: 80)")
+            
+            # Save processed image for debugging when OCR fails
+            import time as time_module
+            processed_img = Image.fromarray(cleaned)
+            debug_processed_filename = f"debug_event_ocr_processed_{int(time_module.time())}.png"
+            processed_img.save(debug_processed_filename)
+            log_debug(f"Event name: Processed OCR image saved to {debug_processed_filename}")
         
         return ""
     except Exception as e:
