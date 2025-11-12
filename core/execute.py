@@ -393,7 +393,7 @@ def career_lobby():
 
         # URA SCENARIO
         log_debug(f"Checking for URA scenario...")
-        if year == "Finale Season" and turn == "Race Day":
+        if year == "Finale Underway" and turn == "Race Day":
             log_info(f"URA Finale")
             
             # Check skill points cap before URA race day (if enabled)
@@ -426,7 +426,7 @@ def career_lobby():
 
         # If calendar is race day, do race
         log_debug(f"Checking for race day...")
-        if turn == "Race Day" and year != "Finale Season":
+        if turn == "Race Day" and year != "Finale Underway":
             log_info(f"Race Day.")
             race_day()
             continue

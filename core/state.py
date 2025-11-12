@@ -334,7 +334,7 @@ def check_skill_points_cap(screenshot=None):
                 skill_file = config.get("skill_file", "skills.json")
                 log_info(f"Loading skills from: {skill_file}")
                 cfg = load_skill_config(skill_file)
-                purchase_plan = create_purchase_plan(all_skills, cfg)
+                purchase_plan = create_purchase_plan(all_skills, cfg, end_career=False)
                 if not purchase_plan:
                     log_info(f"No skills from priority list are currently available")
                     click_image_button("assets/buttons/back_btn.png", "back button", max_attempts=5)

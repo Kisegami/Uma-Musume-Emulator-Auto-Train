@@ -300,17 +300,21 @@ def find_matching_skill(skill_name, available_skills):
     log_debug(f"No match found for '{skill_name}' in available skills")
     return None
 
-def create_purchase_plan(available_skills, config):
+def create_purchase_plan(available_skills, config, end_career=False):
     """
     Create optimized purchase plan based on available skills and config.
     
-    Simple logic:
+    Regular logic:
     - If gold skill appears → buy it
     - If gold skill not available but base skill appears → buy base skill
+    
+    End-career logic:
+    - Buy as many skills as possible (cheapest first) to maximize skill points usage
     
     Args:
         available_skills: List of skill dicts with 'name' and 'price'
         config: Config dict from skills.json
+        end_career: If True, buy all affordable skills instead of just priority skills
     
     Returns:
         List of skills to purchase in order
@@ -323,11 +327,16 @@ def create_purchase_plan(available_skills, config):
     
     purchase_plan = []
     
-    log_info(f"Creating purchase plan")
+    log_info(f"Creating purchase plan (end_career: {end_career})")
     log_debug(f"Priority list: {len(skill_priority)} skills")
     log_debug(f"Gold upgrades: {len(gold_upgrades)} relationships")
     log_debug(f"Available skills: {len(available_skills)} skills")
     
+    # End-career mode: prioritize skill list first, then buy remaining skills
+    if end_career:
+        log_info("End-career mode: priority skills first, then buy remaining skills")
+    
+    # Regular mode: follow priority list
     for priority_skill in skill_priority:
         # Check if this is a gold skill (key in gold_upgrades)
         if priority_skill in gold_upgrades:
@@ -352,6 +361,42 @@ def create_purchase_plan(available_skills, config):
             if skill:
                 purchase_plan.append(skill)
                 log_info(f"Regular skill: {skill['name']} - {skill['price']}")
+    
+    # End-career mode: after priority skills, add remaining skills (cheapest first)
+    if end_career:
+        # Get skills already selected for purchase
+        purchased_skill_names = {skill['name'] for skill in purchase_plan}
+        
+        # Find remaining skills not yet selected
+        remaining_skills = [
+            skill for skill in available_skills 
+            if skill['name'] not in purchased_skill_names
+        ]
+        
+        if remaining_skills:
+            log_info(f"End-career: Adding {len(remaining_skills)} remaining skills (cheapest first)")
+            
+            # Sort remaining skills by price (cheapest first) to maximize purchases
+            try:
+                sorted_remaining = sorted(
+                    remaining_skills,
+                    key=lambda x: int(x.get('price', '999999')) if x.get('price', '0').isdigit() else 999999
+                )
+            except:
+                sorted_remaining = remaining_skills
+            
+            # Add remaining skills to purchase plan
+            purchase_plan.extend(sorted_remaining)
+            
+            log_info(f"End-career plan: {len(purchase_plan)} total skills ({len(purchase_plan) - len(purchased_skill_names)} additional)")
+            
+            # Show some of the additional skills
+            if len(sorted_remaining) > 0:
+                log_info("Additional skills (cheapest first):")
+                for i, skill in enumerate(sorted_remaining[:5], 1):  # Show first 5
+                    log_info(f"  +{i}. {skill['name']} - {skill['price']} points")
+                if len(sorted_remaining) > 5:
+                    log_info(f"  ... and {len(sorted_remaining) - 5} more additional skills")
     
     return purchase_plan
 
@@ -424,36 +469,3 @@ def print_purchase_summary(purchase_plan):
     log_info(f"Total Cost: {total_cost} skill points")
     log_info(f"Skills to buy: {len(purchase_plan)}")
 
-def test_purchase_optimizer():
-    """Test function for the purchase optimizer."""
-    log_info(f"🧪 Testing Purchase Optimizer...")
-    
-    # Load config
-    config = load_skill_config()
-
-    # Live scan via scroll to collect skills from the UI
-    log_info(f"Scanning skills via scroll to build available list...")
-    scan = scan_all_skills_with_scroll(confidence=0.9, brightness_threshold=150, max_scrolls=20)
-    available_skills = [{"name": s.get("name", "Unknown"), "price": s.get("price", "0")} for s in scan.get("all_skills", [])]
-
-    if not available_skills:
-        log_warning(f"No skills found via scan. Falling back to sample data.")
-        available_skills = [
-            {"name": "Shooting For Victory", "price": "160"},
-            {"name": "Homestretch Haste", "price": "153"},
-            {"name": "Deep Breaths", "price": "144"},
-            {"name": "Pressure", "price": "160"},
-            {"name": "The Coast Is Clear", "price": "220"},
-            {"name": "I Can See Right Through You", "price": "110"},
-            {"name": "After-School Stroll", "price": "170"},
-            {"name": "Uma Stan", "price": "160"}
-        ]
-
-    # Create purchase plan
-    purchase_plan = create_purchase_plan(available_skills, config)
-    
-    # Print summary
-    print_purchase_summary(purchase_plan)
-
-if __name__ == "__main__":
-    test_purchase_optimizer()

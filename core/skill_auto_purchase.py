@@ -6,11 +6,56 @@ from core.skill_purchase_optimizer import fuzzy_match_skill_name
 from utils.device import run_adb
 from utils.log import log_debug, log_info, log_warning, log_error
 
+# Skill list swipe coordinates (optimized for skill screen)
+SKILL_LIST_CENTER_X = 504
+SKILL_LIST_TOP_Y = 800
+SKILL_LIST_BOTTOM_Y = 1492
+SKILL_LIST_SCROLL_TARGET_TOP = 1400
+SKILL_LIST_SCROLL_TARGET_BOTTOM = 926
+
 
 # Global cache for skill points to avoid re-detection
 _skill_points_cache = None
 _cache_timestamp = 0
 _cache_lifetime = 300  # Cache valid for 5 minutes
+
+# Optimized swipe functions for skill list navigation
+# These replace hardcoded coordinates and consolidate swipe logic
+def swipe_skill_list_up_fast(wait_before=0.5):
+    """
+    Swipe up in skill list (fast) - used to go to top of list.
+    Swipes DOWN on screen to scroll UP in the list.
+    
+    Args:
+        wait_before: Seconds to wait before performing swipe (default: 0.5)
+    
+    Returns:
+        bool: True if swipe was successful, False otherwise
+    """
+    time.sleep(wait_before)
+    return perform_swipe(
+        SKILL_LIST_CENTER_X, SKILL_LIST_TOP_Y, 
+        SKILL_LIST_CENTER_X, SKILL_LIST_SCROLL_TARGET_TOP, 
+        duration=300
+    )
+
+def swipe_skill_list_down_slow(wait_before=0.5):
+    """
+    Swipe down in skill list (slow) - used for careful navigation.
+    Swipes UP on screen to scroll DOWN in the list.
+    
+    Args:
+        wait_before: Seconds to wait before performing swipe (default: 0.5)
+    
+    Returns:
+        bool: True if swipe was successful, False otherwise
+    """
+    time.sleep(wait_before)
+    return perform_swipe(
+        SKILL_LIST_CENTER_X, SKILL_LIST_BOTTOM_Y,
+        SKILL_LIST_CENTER_X, SKILL_LIST_SCROLL_TARGET_BOTTOM,
+        duration=1050
+    )
 
 
 def cache_skill_points(points: int):
@@ -247,7 +292,7 @@ def fast_swipe_to_top():
     
     for i in range(8):
         log_debug(f"[DEBUG] Fast swipe {i+1}/8")
-        success = perform_swipe(504, 800, 504, 1400, duration=300)  # Swipe DOWN on screen to scroll UP in list
+        success = swipe_skill_list_up_fast(wait_before=0.5)
         if success:
             time.sleep(0.3)  # Short wait between fast swipes
         else:
@@ -370,7 +415,7 @@ def execute_skill_purchases(purchase_plan, max_scrolls=20):
             # Continue scrolling if we haven't found all skills
             if remaining_skills and scrolls_performed < max_scrolls:
                 log_debug(f"Scrolling down to find more skills")
-                success = perform_swipe(504, 1492, 504, 926, duration=1000)  # Slow scroll like recognizer
+                success = swipe_skill_list_down_slow(wait_before=0.5)
                 if not success:
                     log_error(f"Failed to scroll, stopping search")
                     break
@@ -446,41 +491,3 @@ def execute_skill_purchases(purchase_plan, max_scrolls=20):
             'error': str(e)
         }
 
-def test_skill_auto_purchase():
-    """
-    Test function for the automated skill purchase system.
-    """
-    log_info(f"TESTING AUTOMATED SKILL PURCHASE")
-    log_info(f"=" * 60)
-    log_warning(f"This will actually purchase skills!")
-    log_info(f"   Make sure you're on the skill purchase screen.")
-    log_info(f"")
-    
-    # Mock purchase plan for testing
-    test_purchase_plan = [
-        {"name": "Professor of Curvature", "price": "342"},
-        {"name": "Pressure", "price": "160"}
-    ]
-    
-    log_info(f"Test purchase plan:")
-    for i, skill in enumerate(test_purchase_plan, 1):
-        log_info(f"   {i}. {skill['name']} - {skill['price']} points")
-    log_info(f"")
-    
-    confirm = input("Do you want to proceed with the test purchase? (y/n): ").lower().startswith('y')
-    if not confirm:
-        log_info(f"Test cancelled.")
-        return
-    
-    # Execute the purchase
-    result = execute_skill_purchases(test_purchase_plan)
-    
-    log_info(f"\n[INFO] Test Results:")
-    log_info(f"   Success: {result['success']}")
-    log_info(f"   Purchased: {len(result['purchased_skills'])}")
-    log_info(f"   Failed: {len(result['failed_skills'])}")
-    if 'error' in result:
-        log_info(f"   Error: {result['error']}")
-
-if __name__ == "__main__":
-    test_skill_auto_purchase()

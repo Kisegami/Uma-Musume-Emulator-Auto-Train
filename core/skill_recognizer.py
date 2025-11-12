@@ -76,7 +76,7 @@ def remove_overlapping_rectangles(rectangles, overlap_threshold=0.5):
     return result
 
 
-def perform_swipe(start_x, start_y, end_x, end_y, duration=1034):
+def perform_swipe(start_x, start_y, end_x, end_y, duration=1050):
     """
     Perform smooth swipe gesture using ADB.
     
@@ -301,6 +301,102 @@ def is_button_available(screenshot, x, y, width, height, brightness_threshold=15
         log_debug(f"Error checking button availability: {e}")
         return True, 0  # Default to available if check fails
 
+# Helper functions for skill recognition (broken down from large function)
+def _load_skill_template():
+    """Load skill_up template image. Returns (template, error_dict)."""
+    template_path = "assets/buttons/skill_up.png"
+    if not os.path.exists(template_path):
+        return None, {
+            'count': 0, 'locations': [], 'debug_image_path': None,
+            'error': f"Template not found: {template_path}"
+        }
+    
+    template = cv2.imread(template_path, cv2.IMREAD_COLOR)
+    if template is None:
+        return None, {
+            'count': 0, 'locations': [], 'debug_image_path': None,
+            'error': f"Failed to load template: {template_path}"
+        }
+    
+    return template, None
+
+def _perform_template_matching(screenshot, template, confidence):
+    """Perform template matching and return raw matches."""
+    screenshot_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+    template_height, template_width = template.shape[:2]
+    
+    # Perform template matching
+    result = cv2.matchTemplate(screenshot_cv, template, cv2.TM_CCOEFF_NORMED)
+    locations = np.where(result >= confidence)
+    
+    # Convert to list of rectangles  
+    matches = []
+    for pt in zip(*locations[::-1]):  # Switch columns and rows
+        matches.append((pt[0], pt[1], template_width, template_height))
+    
+    return matches
+
+def _filter_available_buttons(screenshot, unique_matches, filter_dark_buttons, brightness_threshold):
+    """Filter out dark/unavailable buttons and return available matches with brightness info."""
+    if not filter_dark_buttons:
+        log_debug(f"Found {len(unique_matches)} buttons (no brightness filtering)")
+        return unique_matches, []
+    
+    log_debug(f"Filtering dark buttons (brightness threshold: {brightness_threshold})...")
+    available_matches = []
+    brightness_info = []
+    
+    for x, y, w, h in unique_matches:
+        is_available, avg_brightness = is_button_available(
+            screenshot, x, y, w, h, brightness_threshold
+        )
+        brightness_info.append({
+            'location': (x, y, w, h),
+            'brightness': avg_brightness,
+            'available': is_available
+        })
+        
+        if is_available:
+            available_matches.append((x, y, w, h))
+    
+    log_debug(f"Found {len(unique_matches)} unique matches, {len(available_matches)} available (bright) buttons")
+    return available_matches, brightness_info
+
+def _extract_skills_info(screenshot, available_matches, extract_skills):
+    """Extract skill information using OCR if requested."""
+    if not extract_skills or not available_matches:
+        return []
+    
+    log_debug(f"Extracting skill information using OCR...")
+    skills_info = []
+    
+    for i, (x, y, w, h) in enumerate(available_matches):
+        try:
+            skill_info = extract_skill_info(screenshot, x, y)
+            skill_data = {
+                'name': skill_info['name'],
+                'price': skill_info['price'],
+                'location': (x, y, w, h),
+                'regions': {
+                    'name_region': skill_info['name_region'],
+                    'price_region': skill_info['price_region']
+                }
+            }
+            skills_info.append(skill_data)
+            log_debug(f"{i+1}. {skill_info['name']} - {skill_info['price']}")
+        except Exception as e:
+            log_debug(f"{i+1}. Error extracting skill: {e}")
+            # Add fallback skill entry
+            skill_data = {
+                'name': f'Skill {i+1} (Error)',
+                'price': 'Error',
+                'location': (x, y, w, h),
+                'regions': {'name_region': None, 'price_region': None}
+            }
+            skills_info.append(skill_data)
+    
+    return skills_info
+
 def recognize_skill_up_locations(confidence=0.9, debug_output=True, overlap_threshold=0.5, 
                                filter_dark_buttons=True, brightness_threshold=150,
                                extract_skills=True):
@@ -316,117 +412,33 @@ def recognize_skill_up_locations(confidence=0.9, debug_output=True, overlap_thre
         extract_skills: Whether to extract skill names and prices using OCR
     
     Returns:
-        dict: {
-            'count': int,
-            'locations': [(x, y, width, height), ...],
-            'skills': [{'name': str, 'price': str, 'location': tuple, 'regions': dict}, ...],
-            'debug_image_path': str or None
-        }
+        dict: Recognition results with count, locations, skills, and debug info
     """
     try:
         # Take screenshot
         screenshot = take_screenshot()
         
-        # Load skill_up template
-        template_path = "assets/buttons/skill_up.png"
-        if not os.path.exists(template_path):
-            log_debug(f"Template not found: {template_path}")
-            return {
-                'count': 0,
-                'locations': [],
-                'debug_image_path': None,
-                'error': f"Template not found: {template_path}"
-            }
-        
-        template = cv2.imread(template_path, cv2.IMREAD_COLOR)
+        # Load template
+        template, error_result = _load_skill_template()
         if template is None:
-            log_debug(f"Failed to load template: {template_path}")
-            return {
-                'count': 0,
-                'locations': [],
-                'debug_image_path': None,
-                'error': f"Failed to load template: {template_path}"
-            }
-        
-        # Convert screenshot to OpenCV format
-        screenshot_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-        
-        # Get template dimensions
-        template_height, template_width = template.shape[:2]
+            return error_result
         
         # Perform template matching
-        result = cv2.matchTemplate(screenshot_cv, template, cv2.TM_CCOEFF_NORMED)
-        
-        # Find locations where the matching exceeds the threshold
-        locations = np.where(result >= confidence)
-        
-        # Convert to list of rectangles
-        matches = []
-        for pt in zip(*locations[::-1]):  # Switch columns and rows
-            matches.append((pt[0], pt[1], template_width, template_height))
+        matches = _perform_template_matching(screenshot, template, confidence)
         
         # Remove overlapping rectangles
         unique_matches = remove_overlapping_rectangles(matches, overlap_threshold)
         
-        # Filter out dark/unavailable buttons if requested
-        available_matches = []
-        brightness_info = []
+        # Filter available buttons
+        available_matches, brightness_info = _filter_available_buttons(
+            screenshot, unique_matches, filter_dark_buttons, brightness_threshold
+        )
         
-        if filter_dark_buttons:
-            log_debug(f"Filtering dark buttons (brightness threshold: {brightness_threshold})...")
-            for x, y, w, h in unique_matches:
-                is_available, avg_brightness = is_button_available(
-                    screenshot, x, y, w, h, brightness_threshold
-                )
-                brightness_info.append({
-                    'location': (x, y, w, h),
-                    'brightness': avg_brightness,
-                    'available': is_available
-                })
-                
-                if is_available:
-                    available_matches.append((x, y, w, h))
-                    
-            log_debug(f"Found {len(matches) if matches else 0} raw matches, {len(unique_matches)} after de-duplication, {len(available_matches)} available (bright) buttons")
-        else:
-            available_matches = unique_matches
-            log_debug(f"Found {len(matches) if matches else 0} raw matches, {len(unique_matches)} after de-duplication")
-        
-        # Extract skill information if requested
-        skills_info = []
-        if extract_skills and available_matches:
-            log_debug(f"Extracting skill information using OCR...")
-            for i, (x, y, w, h) in enumerate(available_matches):
-                try:
-                    skill_info = extract_skill_info(screenshot, x, y)
-                    skill_data = {
-                        'name': skill_info['name'],
-                        'price': skill_info['price'],
-                        'location': (x, y, w, h),
-                        'regions': {
-                            'name_region': skill_info['name_region'],
-                            'price_region': skill_info['price_region']
-                        }
-                    }
-                    skills_info.append(skill_data)
-                    log_debug(f"{i+1}. {skill_info['name']} - {skill_info['price']}")
-                except Exception as e:
-                    log_debug(f"{i+1}. Error extracting skill: {e}")
-                    # Add a fallback skill entry
-                    skill_data = {
-                        'name': f'Skill {i+1} (Error)',
-                        'price': 'Error',
-                        'location': (x, y, w, h),
-                        'regions': {
-                            'name_region': None,
-                            'price_region': None
-                        }
-                    }
-                    skills_info.append(skill_data)
-        
-        debug_image_path = None
+        # Extract skill information
+        skills_info = _extract_skills_info(screenshot, available_matches, extract_skills)
         
         # Generate debug image if requested
+        debug_image_path = None
         if debug_output and (available_matches or unique_matches):
             debug_image_path = generate_debug_image(
                 screenshot, 
@@ -436,6 +448,7 @@ def recognize_skill_up_locations(confidence=0.9, debug_output=True, overlap_thre
                 filter_dark_buttons
             )
         
+        # Build result dictionary
         result = {
             'count': len(available_matches),
             'locations': available_matches,
@@ -578,91 +591,6 @@ def generate_debug_image(screenshot, locations, confidence, brightness_info=None
         log_debug(f"Error generating debug image: {e}")
         return None
 
-def test_skill_recognition():
-    """
-    Test function for skill recognition - can be used for manual testing.
-    """
-    log_debug(f"Testing skill recognition with brightness filtering...")
-    log_debug(f"=" * 60)
-    
-    # Test with optimized settings for Auto Skill Purchase
-    log_debug(f"Testing with confidence: 0.9 (optimized for Auto Skill Purchase)")
-    result = recognize_skill_up_locations(
-        confidence=0.9, 
-        debug_output=True,
-        filter_dark_buttons=True,
-        brightness_threshold=150
-    )
-        
-    if 'error' in result:
-        log_debug(f"Error: {result['error']}")
-        return
-        
-    log_debug(f"Available skill_up icons: {result['count']}")
-    log_debug(f"Raw matches: {result.get('raw_matches', 'N/A')}")
-    log_debug(f"After de-duplication: {result.get('deduplicated_matches', 'N/A')}")
-    
-    if result.get('dark_buttons_filtered', 0) > 0:
-        log_debug(f"Dark buttons filtered out: {result['dark_buttons_filtered']}")
-    
-    # Show skill information if available
-    if result.get('skills'):
-        log_debug(f"Detected Skills and Prices:")
-        log_debug(f"=" * 60)
-        for i, skill in enumerate(result['skills']):
-            x, y, w, h = skill['location']
-            log_debug(f"{i+1}. Skill: {skill['name']}")
-            log_debug(f"Price: {skill['price']}")
-            log_debug(f"Button Location: ({x}, {y}) size: {w}x{h}")
-            if skill['regions']['name_region']:
-                nr = skill['regions']['name_region']
-                log_debug(f"Name Region: ({nr[0]}, {nr[1]}) to ({nr[2]}, {nr[3]})")
-            if skill['regions']['price_region']:
-                pr = skill['regions']['price_region']
-                log_debug(f"Price Region: ({pr[0]}, {pr[1]}) to ({pr[2]}, {pr[3]})")
-            log_debug(f"")
-    elif result['locations']:
-        log_debug(f"Available button locations (skill info extraction disabled):")
-        for i, (x, y, w, h) in enumerate(result['locations']):
-            log_debug(f"{i+1}: ({x}, {y}) size: {w}x{h}")
-    
-    # Show brightness info if available
-    if 'brightness_info' in result:
-        log_debug(f"Brightness analysis:")
-        for info in result['brightness_info']:
-            x, y, w, h = info['location']
-            status = "✓ Available" if info['available'] else "✗ Dark"
-            log_debug(f"({x}, {y}): {info['brightness']:.1f} - {status}")
-    
-    if result['debug_image_path']:
-        log_debug(f"Debug image: {result['debug_image_path']}")
-    
-    # Test comparison between filtered and unfiltered
-    log_debug(f"=" * 60)
-    log_debug(f"Comparing filtered vs unfiltered detection:")
-    
-    log_debug(f"1. Without brightness filtering:")
-    result_unfiltered = recognize_skill_up_locations(
-        confidence=0.9, 
-        debug_output=False,
-        filter_dark_buttons=False
-    )
-    log_debug(f"Found: {result_unfiltered['count']} buttons")
-    
-    log_debug(f"2. With brightness filtering (Auto Skill Purchase optimized):")
-    result_filtered = recognize_skill_up_locations(
-        confidence=0.9, 
-        debug_output=True,
-        filter_dark_buttons=True,
-        brightness_threshold=150
-    )
-    log_debug(f"Found: {result_filtered['count']} available buttons")
-    if 'dark_buttons_filtered' in result_filtered:
-        log_debug(f"Filtered out: {result_filtered['dark_buttons_filtered']} dark buttons")
-    
-    log_debug(f"=" * 60)
-    log_debug(f"Test completed!")
-
 def scan_all_skills_with_scroll(swipe_start_x=504, swipe_start_y=1490, swipe_end_x=504, swipe_end_y=926,
                                confidence=0.9, brightness_threshold=150, max_scrolls=20):
     """
@@ -745,6 +673,7 @@ def scan_all_skills_with_scroll(swipe_start_x=504, swipe_start_y=1490, swipe_end
             scrolls_performed += 1
             if scrolls_performed < max_scrolls:
                 log_debug(f"Scrolling")
+                time.sleep(0.5)  # Wait before swipe to ensure UI is ready
                 success = perform_swipe(swipe_start_x, swipe_start_y, swipe_end_x, swipe_end_y)
                 
                 if not success:
@@ -783,66 +712,6 @@ def scan_all_skills_with_scroll(swipe_start_x=504, swipe_start_y=1490, swipe_end
             'error': str(e)
         }
 
-def test_skill_listing():
-    """
-    Test function specifically for listing all skills with their prices.
-    """
-    log_debug(f"Testing skill listing with OCR extraction...")
-    log_debug(f"=" * 70)
-    log_debug(f"This will detect all available skill_up buttons and extract their names and prices.")
-    log_debug(f"")
-    
-    # Run with skill info extraction enabled
-    result = recognize_skill_up_locations(
-        confidence=0.9,
-        debug_output=True,
-        filter_dark_buttons=True,
-        brightness_threshold=150,
-        extract_skills=True
-    )
-    
-    if 'error' in result:
-        log_debug(f"Error: {result['error']}")
-        return
-    
-    log_debug(f"Detection Results:")
-    log_debug(f"Available skill buttons found: {result['count']}")
-    log_debug(f"Total detected before filtering: {result.get('deduplicated_matches', 'N/A')}")
-    
-    if result.get('dark_buttons_filtered', 0) > 0:
-        log_debug(f"Dark buttons filtered out: {result['dark_buttons_filtered']}")
-    
-    if result.get('skills'):
-        log_debug(f"SKILL INVENTORY:")
-        log_debug(f"=" * 70)
-        
-        for i, skill in enumerate(result['skills'], 1):
-            x, y, w, h = skill['location']
-            log_debug(f"{i:2d}. {skill['name']:<30} | Price: {skill['price']:<10} | Button: ({x}, {y}")
-        
-        log_debug(f"=" * 70)
-        log_debug(f"Total skills available for purchase: {len(result['skills'])}")
-        
-        # Extract unique prices for summary
-        prices = [skill['price'] for skill in result['skills'] if skill['price'] != 'Unknown Price']
-        if prices:
-            try:
-                numeric_prices = [int(p) for p in prices if p.isdigit()]
-                if numeric_prices:
-                    log_debug(f"Price range: {min(numeric_prices)} - {max(numeric_prices)}")
-            except:
-                pass
-    else:
-        log_debug(f"No skills detected or OCR extraction failed")
-        if not OCR_AVAILABLE:
-            log_debug(f"Note: pytesseract not available for OCR")
-        
-    if result['debug_image_path']:
-        log_debug(f"Debug image saved: {result['debug_image_path']}")
-        log_debug(f"Green boxes = Available buttons, Red boxes = Dark buttons")
-    
-    log_debug(f"=" * 70)
-    log_debug(f"Skill listing test completed!")
 
 def deduplicate_skills(skills_list, similarity_threshold=0.8):
     """
@@ -938,7 +807,3 @@ def calculate_string_similarity(str1, str2):
     similarity = 1.0 - (distance / max_length)
     return similarity
 
-
-if __name__ == "__main__":
-    # Run test when script is executed directly
-    test_skill_listing()

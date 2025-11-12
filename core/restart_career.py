@@ -116,7 +116,8 @@ def execute_skill_purchase_workflow(available_points: int):
         # Deduplicate and optimize skill purchase
         deduplicated_skills = deduplicate_skills(all_available_skills, similarity_threshold=0.8)
         config = load_skill_config()
-        purchase_plan = create_purchase_plan(deduplicated_skills, config)
+        # Use end_career=True to buy all available skills instead of just priority skills
+        purchase_plan = create_purchase_plan(deduplicated_skills, config, end_career=True)
         
         if purchase_plan:
             affordable_skills, total_cost, remaining_points = filter_affordable_skills(purchase_plan, available_points)
@@ -625,20 +626,3 @@ def career_lobby_check(screenshot=None) -> bool:
     return True  # Continue with normal career lobby
 
 
-def main():
-    """Main function for testing"""
-    log_info(f"=== Career Restart Manager Test ===")
-    
-    if check_complete_career_screen():
-        log_info(f"Complete Career screen found - executing restart workflow")
-        success = run_restart_workflow()
-        if success:
-            log_info(f"✓ Restart workflow completed successfully")
-        else:
-            log_info(f"✗ Restart workflow failed or completed early")
-    else:
-        log_info(f"No Complete Career screen found")
-
-
-if __name__ == "__main__":
-    main()

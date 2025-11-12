@@ -30,8 +30,8 @@ def is_racing_available(year):
     # No races in Pre-Debut
     if is_pre_debut_year(year):
         return False
-    # No races in Finale Season (final training period before URA)
-    if "Finale Season" in year:
+    # No races in Finale Underway (final training period before URA)
+    if "Finale Underway" in year:
         return False
     year_parts = year.split(" ")
     # No races in July and August (summer break)
