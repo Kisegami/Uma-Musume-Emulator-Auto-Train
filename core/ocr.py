@@ -290,7 +290,7 @@ def extract_event_name_text(pil_img: Image.Image) -> str:
             conf = int(data['conf'][i])
             if word:  # Any detected word
                 all_words.append(f"{word}({conf})")
-                if conf >= 80:
+                if conf >= 70:  # Lowered from 80 to 70 for better detection
                     high_confidence_words.append(word)
         
         # Always log what OCR detected, even if confidence is low

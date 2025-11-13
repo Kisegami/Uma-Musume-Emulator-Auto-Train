@@ -449,9 +449,18 @@ def handle_event_choice():
             log_error(f"❌ Event region coordinates: {event_region}")
             log_error(f"❌ Image size: {event_image.size}")
             log_error(f"❌ Check the OCR logs above for what text was detected (if any)")
-            log_error(f"❌ BOT STOPPED - Please check the event screen and OCR configuration")
             
-            raise RuntimeError("Event detection failed: No text detected in event region. Bot stopped.")
+            # Check if bot should stop on detection failure (configurable)
+            stop_on_event_failure = config.get("stop_on_event_detection_failure", False)
+            
+            if stop_on_event_failure:
+                log_error(f"❌ BOT STOPPED - Please check the event screen and OCR configuration")
+                log_error(f"❌ (To disable auto-stop, set 'stop_on_event_detection_failure' to false in config.json)")
+                raise RuntimeError("Event detection failed: No text detected in event region. Bot stopped.")
+            else:
+                log_warning(f"⚠️  Continuing with fallback (top choice) - Enable 'stop_on_event_detection_failure' in config to stop on failure")
+                # Fallback to top choice
+                return 1, False, recheck_locations
         
         log_info(f"Event found: {event_name}")
 
