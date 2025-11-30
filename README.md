@@ -1,8 +1,5 @@
 # Umamusume Auto Training Bot (ADB/Android Version)
-<a href="http://discord.gg/PhVmBtfsKp" target="_blank"><img src="https://img.shields.io/discord/1399387259245166674?color=5865F2&label=Join%20our%20Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Join our Discord server"></a>
 
-<a href="https://www.buymeacoffee.com/kisegami" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
- 
  ## THE GUIDE MIGHT BE OUTDATED, DOCUMENT IS WIP
 
 An automated training bot for Umamusume that works with **Android emulators** using ADB (Android Debug Bridge).
