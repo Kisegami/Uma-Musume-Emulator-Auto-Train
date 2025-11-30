@@ -105,8 +105,12 @@ def check_turn(screenshot=None):
         log_debug(f"Turn region screenshot taken: {TURN_REGION}")
         
         # Save the turn region image for debugging
-        turn_img.save("debug_turn_region.png")
-        log_debug(f"Saved turn region image to debug_turn_region.png")
+        if DEBUG_MODE:
+            try:
+                turn_img.save("debug_turn_region.png")
+                log_debug(f"Saved turn region image to debug_turn_region.png")
+            except Exception:
+                pass
         
         # Apply additional enhancement for better digit recognition
         from PIL import ImageEnhance
@@ -120,8 +124,12 @@ def check_turn(screenshot=None):
         turn_img = sharpness_enhancer.enhance(2.0)
         
         # Save the enhanced version
-        turn_img.save("debug_turn_enhanced.png")
-        log_debug(f"Saved enhanced turn image to debug_turn_enhanced.png")
+        if DEBUG_MODE:
+            try:
+                turn_img.save("debug_turn_enhanced.png")
+                log_debug(f"Saved enhanced turn image to debug_turn_enhanced.png")
+            except Exception:
+                pass
         
         # Use the best method found in testing: basic processing + PSM 7
         import pytesseract
@@ -253,11 +261,15 @@ def check_skill_points(screenshot=None):
     sharpener = ImageEnhance.Sharpness(skill_img)
     skill_img_sharp = sharpener.enhance(2.5)  # Increase sharpness by 2.5x
     
-    # Save debug images for skill points OCR troubleshooting
-    skill_img.save("debug_skill_points_original.png")
-    skill_img_sharp.save("debug_skill_points_sharpened.png")
-    log_debug(f"Saved original skill points image to debug_skill_points_original.png")
-    log_debug(f"Saved sharpened skill points image to debug_skill_points_sharpened.png")
+    # Save debug images for skill points OCR troubleshooting (only in debug mode)
+    if DEBUG_MODE:
+        try:
+            skill_img.save("debug_skill_points_original.png")
+            skill_img_sharp.save("debug_skill_points_sharpened.png")
+            log_debug(f"Saved original skill points image to debug_skill_points_original.png")
+            log_debug(f"Saved sharpened skill points image to debug_skill_points_sharpened.png")
+        except Exception:
+            pass
     log_debug(f"Skill points region: {SKILL_PTS_REGION}")
     
     # Use sharpened image for OCR
@@ -460,12 +472,12 @@ def check_current_stats(screenshot=None):
 
 
 def check_energy_bar(screenshot=None, debug_visualization=False):
-    """Compute energy percentage using pill-stroke detection and midline analysis.
+    """Compute energy percentage using saturation-based detection.
 
     - Crop to the energy region
-    - Detect the dark stroke (~80,80,80) to get the pill interior
-    - Use midline and 5px-inward boundaries
-    - Count right-side gray (~117,117,117); colorful left is energy
+    - Detect filled (high saturation) vs empty (low saturation) portions
+    - Use horizontal line analysis at the midpoint
+    - Calculate percentage based on filled width
     """
     try:
         import cv2
@@ -475,7 +487,7 @@ def check_energy_bar(screenshot=None, debug_visualization=False):
         if screenshot is None:
             screenshot = take_screenshot()
 
-        # Crop region (x, y, w, h)
+        # Crop region (x, y, w, h) - energy bar location
         x, y, width, height = 330, 203, 602, 72
         cropped = screenshot.crop((x, y, x + width, y + height))
 
@@ -483,69 +495,183 @@ def check_energy_bar(screenshot=None, debug_visualization=False):
         if img.shape[2] == 4:
             img = img[:, :, :3]
 
-        # Stroke mask around (80,80,80)
-        lower_stroke = np.array([60, 60, 60], dtype=np.uint8)
-        upper_stroke = np.array([110, 110, 110], dtype=np.uint8)
-        stroke = cv2.inRange(img, lower_stroke, upper_stroke)
-        kernel = np.ones((3, 3), np.uint8)
-        stroke = cv2.morphologyEx(stroke, cv2.MORPH_CLOSE, kernel, iterations=2)
-
-        contours, _ = cv2.findContours(stroke, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            log_debug(f"No stroke contour found for energy pill")
-            return 0.0
-        largest = max(contours, key=cv2.contourArea)
-
         h, w = img.shape[:2]
-        filled = np.zeros((h, w), dtype=np.uint8)
-        cv2.fillPoly(filled, [largest], 255)
-        interior = cv2.erode(filled, kernel, iterations=3)
+        
+        if DEBUG_MODE:
+            log_debug(f"Energy bar image shape: {img.shape}")
 
-        ys, xs = np.where(interior > 0)
-        if ys.size == 0:
-            log_debug(f"No interior found inside pill stroke")
-            return 0.0
-        mid_y = int((ys.min() + ys.max()) / 2)
+        # Find the horizontal midline of the bar
+        mid_y = h // 2
 
-        line = interior[mid_y, :]
-        cols = np.where(line > 0)[0]
-        if cols.size == 0:
-            log_debug(f"No interior on midline")
-            return 0.0
-        left_edge = int(cols[0])
-        right_edge = int(cols[-1])
+        # Strategy: Use HSV saturation to detect filled vs empty
+        # Filled portion: has high saturation (colorful - blue, yellow, green gradient)
+        # Empty portion: has low saturation (gray)
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        
+        # Extract saturation channel
+        saturation = hsv[:, :, 1]
+        
+        # First, try to detect the actual pill interior width dynamically (handles event-based size changes)
+        dyn_left, dyn_right = None, None
+        try:
+            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            edges = cv2.Canny(gray, 60, 160)
+            edges = cv2.dilate(edges, np.ones((3,3), np.uint8), iterations=1)
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            best = None
+            best_score = -1
+            for cnt in contours:
+                x0, y0, ww, hh = cv2.boundingRect(cnt)
+                area = ww * hh
+                if ww < 200 or hh < 20:
+                    continue
+                aspect = float(ww) / float(hh + 1e-3)
+                score = area * aspect
+                if score > best_score:
+                    best_score = score
+                    best = (x0, y0, ww, hh)
+            if best is not None:
+                x0, y0, ww, hh = best
+                # Inset a bit to get inside the stroke
+                inset = max(4, int(min(ww, hh) * 0.05))
+                dyn_left = max(0, x0 + inset)
+                dyn_right = min(w - 1, x0 + ww - inset)
+        except Exception as _e:
+            pass
+        
+        # Tunables - hardcoded for stability (ignore config)
+        left_margin_cfg = 10
+        right_margin_off_cfg = 16
+        sat_threshold = 36
+        min_gray_run_px = 12
+        min_gray_run_pct = 0.06
+        close_kernel = 7
 
-        # Move 5px inward
-        shift = 5
-        left_in = min(max(left_edge + shift, 0), w - 1)
-        right_in = max(min(right_edge - shift, w - 1), left_in)
-        total_width = right_in - left_in + 1
-        if total_width <= 0:
-            return 0.0
+        # Choose margins: prefer dynamic if available, else fallback to config
+        if dyn_left is not None and dyn_right is not None and dyn_right - dyn_left > 100:
+            left_margin = dyn_left
+            right_margin = dyn_right
+            source = "dynamic"
+        else:
+            left_margin = max(0, min(left_margin_cfg, w - 1))
+            right_margin = max(left_margin + 1, min(w - right_margin_off_cfg, w - 1))
+            source = "config"
 
-        # Gray empty (~117,117,117)
-        lower_gray = np.array([100, 100, 100], dtype=np.uint8)
-        upper_gray = np.array([140, 140, 140], dtype=np.uint8)
-        gray = cv2.inRange(img, lower_gray, upper_gray)
-        gray_segment = gray[mid_y, left_in:right_in + 1]
-        gray_width = int(np.count_nonzero(gray_segment))
-        filled_width = max(total_width - gray_width, 0)
-        percentage = float(filled_width / total_width * 100.0)
-
-        if debug_visualization:
+        if DEBUG_MODE:
+            log_debug(f"Energy params: src={source}, left={left_margin}, right={right_margin}, sat_th={sat_threshold}, min_run_px={min_gray_run_px}, min_run_pct={min_gray_run_pct}, close_kernel={close_kernel}")
+        # Build gray mask by saturation threshold then horizontally close small gaps
+        gray_mask = (saturation <= sat_threshold).astype(np.uint8) * 255
+        if close_kernel > 1:
             try:
-                cv2.imwrite("debug_energy_cropped.png", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+                k = cv2.getStructuringElement(cv2.MORPH_RECT, (close_kernel, 1))
+                gray_mask = cv2.morphologyEx(gray_mask, cv2.MORPH_CLOSE, k, iterations=1)
+            except Exception:
+                pass
+
+        # Compute constants
+        bar_content_width = right_margin - left_margin + 1
+        min_gray_run = max(min_gray_run_px, int(bar_content_width * min_gray_run_pct))
+        mid_y = h // 2
+
+        # Sample multiple horizontal lines around midline and find continuous gray run from the right
+        offsets = [-10, -6, -3, 0, 3, 6, 10]
+        candidate_boundaries = []
+        for dy in offsets:
+            y_idx = int(mid_y + dy)
+            if y_idx <= 6 or y_idx >= h - 7:
+                continue
+            line = gray_mask[y_idx, :]
+            run = 0
+            in_gray = False
+            boundary_index = None
+            for x_pos in range(right_margin, left_margin - 1, -1):
+                if line[x_pos] > 0:
+                    # in gray region contiguous from the right edge
+                    run += 1
+                    in_gray = True
+                else:
+                    # hit non-gray; if we already have a long gray run, boundary is right after this non-gray
+                    if in_gray and run >= min_gray_run:
+                        boundary_index = x_pos + 1
+                        break
+                    # reset and continue searching
+                    run = 0
+                    in_gray = False
+            # if entire span is gray, put boundary at left margin (0%)
+            if boundary_index is None and in_gray and run >= min_gray_run:
+                boundary_index = left_margin
+            if boundary_index is not None:
+                candidate_boundaries.append(boundary_index)
+
+        if not candidate_boundaries:
+            # Fallback: estimate using gray density to avoid reporting 100% incorrectly
+            roi = gray_mask[max(0, mid_y-3):min(h, mid_y+4), left_margin:right_margin+1]
+            gray_ratio = float(np.count_nonzero(roi)) / float(roi.size)
+            if gray_ratio < 0.05:
+                percentage = 100.0
+            elif gray_ratio > 0.95:
+                percentage = 0.0
+            else:
+                # Fallback to rightmost filled pixel (saturation-based)
+                midline_sat = saturation[mid_y, :]
+                filled_positions = np.where(midline_sat > sat_threshold)[0]
+                if len(filled_positions) == 0:
+                    percentage = 0.0
+                else:
+                    rightmost_filled = min(filled_positions[-1], right_margin)
+                    filled_content_width = max(0, rightmost_filled - left_margin + 1)
+                    percentage = float(filled_content_width / bar_content_width * 100.0)
+            if DEBUG_MODE:
+                log_debug(f"Energy bar: no gray run; gray_ratio={gray_ratio:.2f}; percent={percentage:.1f}%")
+        else:
+            boundary_index = int(np.median(candidate_boundaries))
+            boundary_index = max(left_margin, min(boundary_index, right_margin))
+            filled_content_width = max(0, boundary_index - left_margin)
+            percentage = float(filled_content_width / bar_content_width * 100.0)
+            percentage = min(100.0, max(0.0, percentage))
+            if DEBUG_MODE:
+                log_debug(f"Energy bar: boundaries={candidate_boundaries}, median={boundary_index}, left={left_margin}, right={right_margin}, min_run={min_gray_run}, percent={percentage:.1f}%")
+
+        if DEBUG_MODE or debug_visualization:
+            try:
+                # Ensure debug directory exists
+                debug_dir = os.path.join(os.getcwd(), "Energy test")
+                os.makedirs(debug_dir, exist_ok=True)
+                ts = time.strftime("%Y%m%d_%H%M%S")
+                cropped_path = os.path.join(debug_dir, f"energy_{ts}_cropped.png")
+                viz_path = os.path.join(debug_dir, f"energy_{ts}_viz.png")
+
+                # Save original cropped image
+                cv2.imwrite(cropped_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+                
+                # Create visualization with midline and analysis
                 debug_img = cv2.cvtColor(img.copy(), cv2.COLOR_RGB2BGR)
+                
+                # Draw midline and margins
                 cv2.line(debug_img, (0, mid_y), (w - 1, mid_y), (0, 255, 0), 2)
-                cv2.line(debug_img, (left_in, 0), (left_in, h - 1), (255, 0, 0), 2)
-                cv2.line(debug_img, (right_in, 0), (right_in, h - 1), (255, 0, 0), 2)
-                cv2.putText(debug_img, f"Left: {left_in}, Right: {right_in}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-                cv2.imwrite("debug_horizontal_line.png", debug_img)
-                vis = debug_img.copy()
-                text = f"Energy: {percentage:.1f}%"
-                cv2.putText(vis, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(vis, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
-                cv2.imwrite("debug_energy_visualization.png", vis)
+                try:
+                    # If variables exist draw margins/boundary
+                    cv2.line(debug_img, (left_margin, 0), (left_margin, h - 1), (255, 0, 0), 1)
+                    cv2.line(debug_img, (right_margin, 0), (right_margin, h - 1), (255, 0, 0), 1)
+                    if 'boundary_index' in locals() and boundary_index is not None:
+                        cv2.line(debug_img, (int(boundary_index), 0), (int(boundary_index), h - 1), (0, 255, 255), 2)
+                except Exception:
+                    pass
+                
+                # Draw saturation visualization overlay
+                sat_vis = cv2.cvtColor(saturation, cv2.COLOR_GRAY2BGR)
+                debug_img = cv2.addWeighted(debug_img, 0.7, sat_vis, 0.3, 0)
+                
+                # Add text
+                cv2.putText(debug_img, f"Energy: {percentage:.1f}%", (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                cv2.putText(debug_img, f"Midline: y={mid_y}", (10, 60), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                
+                cv2.imwrite(viz_path, debug_img)
+                log_debug(f"Saved energy debug: {os.path.basename(cropped_path)}, {os.path.basename(viz_path)}")
             except Exception as viz_e:
                 log_debug(f"Energy debug visualization failed: {viz_e}")
 
@@ -553,81 +679,6 @@ def check_energy_bar(screenshot=None, debug_visualization=False):
 
     except Exception as e:
         log_debug(f"Energy bar check failed: {e}")
+        if DEBUG_MODE:
+            log_debug(f"Error details: {str(e)}")
         return 0.0
-
-
-def _create_energy_debug_visualization(original_image, contour, interior_mask, gray_mask, percentage, middle_y, leftmost, rightmost, gray_positions):
-    """
-    Create debug visualization files for energy bar detection analysis.
-    
-    Args:
-        original_image: The cropped energy bar image
-        contour: The detected energy bar contour
-        interior_mask: Mask of the interior area
-        gray_mask: Mask of gray (empty) pixels
-        percentage: Calculated fill percentage
-        middle_y: Y coordinate of analysis line
-        leftmost: Left boundary of energy bar
-        rightmost: Right boundary of energy bar
-        gray_positions: Positions of gray pixels on analysis line
-    """
-    try:
-        import cv2
-        import numpy as np
-        
-        # Create cropped region debug
-        cv2.imwrite("debug_energy_cropped.png", cv2.cvtColor(original_image, cv2.COLOR_RGB2BGR))
-        log_debug(f"Saved cropped region to: debug_energy_cropped.png")
-        
-        # Create horizontal line analysis debug
-        debug_img = cv2.cvtColor(original_image.copy(), cv2.COLOR_RGB2BGR)
-        
-        # Draw the horizontal analysis line in green
-        cv2.line(debug_img, (0, middle_y), (original_image.shape[1]-1, middle_y), (0, 255, 0), 2)
-        
-        # Draw the left and right boundaries in blue, shifted inward by 5px
-        shift = 5
-        draw_left = min(max(leftmost + shift, 0), original_image.shape[1]-1)
-        draw_right = max(min(rightmost - shift, original_image.shape[1]-1), draw_left)
-        cv2.line(debug_img, (draw_left, 0), (draw_left, original_image.shape[0]-1), (255, 0, 0), 2)
-        cv2.line(debug_img, (draw_right, 0), (draw_right, original_image.shape[0]-1), (255, 0, 0), 2)
-        
-        # Mark gray positions with red dots
-        for gray_x in gray_positions:
-            cv2.circle(debug_img, (int(gray_x), middle_y), 2, (0, 0, 255), -1)
-        
-        # Add text annotations
-        cv2.putText(debug_img, f"Analysis Line: y={middle_y}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(debug_img, f"Left: {draw_left}, Right: {draw_right}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(debug_img, f"Gray pixels: {len(gray_positions)}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        cv2.imwrite("debug_horizontal_line.png", debug_img)
-        log_debug(f"Saved horizontal line analysis to: debug_horizontal_line.png")
-        
-        # Create final visualization
-        vis_image = cv2.cvtColor(original_image.copy(), cv2.COLOR_RGB2BGR)
-        
-        # Draw the contour in green
-        cv2.drawContours(vis_image, [contour], -1, (0, 255, 0), 2)
-        
-        # Show interior area in blue tint
-        blue_overlay = np.zeros_like(vis_image)
-        blue_overlay[:, :, 0] = interior_mask  # Blue channel
-        vis_image = cv2.addWeighted(vis_image, 0.8, blue_overlay, 0.2, 0)
-        
-        # Show gray areas in red tint
-        red_overlay = np.zeros_like(vis_image)
-        red_overlay[:, :, 2] = gray_mask  # Red channel
-        vis_image = cv2.addWeighted(vis_image, 0.8, red_overlay, 0.2, 0)
-        
-        # Add percentage text
-        text = f"Energy: {percentage:.1f}%"
-        cv2.putText(vis_image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-        cv2.putText(vis_image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
-        
-        # Save visualization
-        cv2.imwrite("debug_energy_visualization.png", vis_image)
-        log_debug(f"Saved visualization to: debug_energy_visualization.png")
-        
-    except Exception as e:
-        log_debug(f"Failed to create debug visualization: {e}")

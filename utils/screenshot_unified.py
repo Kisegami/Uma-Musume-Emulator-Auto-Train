@@ -24,15 +24,28 @@ class NemuIpcError(Exception):
 class NemuIpcCapture:
     """Nemu IPC capture implementation for faster screenshots"""
 
-    def __init__(self, nemu_folder: str, instance_id: int, display_id: int = 0, timeout: float = 1.0, verbose: bool = False):
+    def __init__(
+        self,
+        nemu_folder: str,
+        instance_id: Union[int, str, None],
+        display_id: int = 0,
+        timeout: float = 1.0,
+        verbose: bool = False,
+        adb_serial: Optional[str] = None,
+    ):
         self.nemu_folder = nemu_folder
-        self.instance_id = instance_id
         self.display_id = display_id
         self.timeout = timeout
         self.verbose = verbose
         self.connect_id = 0
         self.width = 0
         self.height = 0
+        self.adb_serial = adb_serial
+
+        # Build ordered list of candidate instance IDs
+        self.instance_candidates = self._build_instance_candidates(instance_id)
+        # Default to the first candidate until a successful connect updates it
+        self.instance_id = self.instance_candidates[0]
 
         # Try to load DLL from possible locations
         candidates = [
@@ -74,6 +87,47 @@ class NemuIpcCapture:
 
         self._executor = ThreadPoolExecutor(max_workers=1)
 
+    def _build_instance_candidates(self, requested_id: Union[int, str, None]) -> list[int]:
+        """
+        Determine the ordered list of Nemu instance IDs to try.
+        Priority order:
+            1. Explicit config value (if valid int >= 0)
+            2. Auto derived from adb serial (when requested_id is "auto"/None/<0)
+            3. Common fallback IDs (0-3)
+        """
+        candidates: list[int] = []
+
+        def _append_unique(value: Optional[int]):
+            if value is None:
+                return
+            if value < 0:
+                return
+            if value not in candidates:
+                candidates.append(value)
+
+        # 1) Explicit config value
+        if isinstance(requested_id, int):
+            _append_unique(requested_id)
+        elif isinstance(requested_id, str):
+            if requested_id.strip().lower() == 'auto':
+                requested_id = None
+            else:
+                try:
+                    _append_unique(int(requested_id))
+                except ValueError:
+                    requested_id = None
+
+        # 2) Auto derive from adb serial if needed
+        if not candidates:
+            derived = self.serial_to_id(self.adb_serial) if self.adb_serial else None
+            _append_unique(derived)
+
+        # 3) Fall back to a few common IDs to improve UX
+        for fallback in range(0, 4):
+            _append_unique(fallback)
+
+        return candidates
+
     @staticmethod
     def serial_to_id(serial: str) -> Optional[int]:
         """Convert ADB serial to Nemu instance ID"""
@@ -97,19 +151,36 @@ class NemuIpcCapture:
             fut.cancel()
             raise NemuIpcError('IPC call timeout')
 
+    def _attempt_connect(self, target_instance: int, timeout: Optional[float] = None) -> int:
+        """
+        Attempt a single IPC connection; returns connect id on success or 0 on failure.
+        Some DLL builds accept bytes, others accept str. We try both when needed.
+        """
+        cid = self.lib.nemu_connect(self.nemu_folder, int(target_instance))
+        if cid == 0 and timeout is not None:
+            folder_bytes = os.fsencode(self.nemu_folder)
+            cid = self._run_with_timeout(self.lib.nemu_connect, folder_bytes, int(target_instance), timeout=timeout)
+        return int(cid)
+
     def connect(self, timeout: Optional[float] = None):
         """Connect to Nemu emulator"""
         if self.connect_id:
             return
-        
-        # Simple connection - DLL messages will go to console but won't affect GUI
-        cid = self.lib.nemu_connect(self.nemu_folder, int(self.instance_id))
-        if cid == 0 and timeout is not None:
-            folder_bytes = os.fsencode(self.nemu_folder)
-            cid = self._run_with_timeout(self.lib.nemu_connect, folder_bytes, int(self.instance_id), timeout=timeout)
-        if cid == 0:
-            raise NemuIpcError('nemu_connect failed. Check folder path and that emulator is running')
-        self.connect_id = int(cid)
+
+        last_error: Optional[str] = None
+        for candidate in self.instance_candidates:
+            cid = self._attempt_connect(candidate, timeout=timeout)
+            if cid != 0:
+                self.instance_id = candidate
+                self.connect_id = cid
+                if self.verbose:
+                    log_info(f"Nemu IPC connected using instance_id={candidate}")
+                return
+            last_error = f"nemu_connect returned 0 for instance_id={candidate}"
+
+        if last_error:
+            raise NemuIpcError(f'{last_error}. Check folder path and ensure the emulator instance is running')
+        raise NemuIpcError('nemu_connect failed. No instance candidates available')
 
     def disconnect(self):
         """Disconnect from Nemu emulator"""
@@ -203,17 +274,20 @@ class UnifiedScreenshot:
         self.capture_method = self.config.get('capture_method', 'adb')
         self.nemu_capture = None
         self.adb_capture = None
+        self.adb_config = self.config.get('adb_config', {})
 
         # Initialize capture method
         if self.capture_method == 'nemu_ipc':
             try:
                 nemu_config = self.config.get('nemu_ipc_config', {})
+                adb_serial = self.adb_config.get('device_address')
                 self.nemu_capture = NemuIpcCapture(
                     nemu_folder=nemu_config.get('nemu_folder', 'J:\\MuMuPlayerGlobal'),
                     instance_id=nemu_config.get('instance_id', 2),
                     display_id=nemu_config.get('display_id', 0),
                     timeout=nemu_config.get('timeout', 1.0),
-                    verbose=False
+                    verbose=False,
+                    adb_serial=adb_serial,
                 )
                 # Only print once during initialization, not every screenshot
                 if not hasattr(self, '_nemu_initialized'):
@@ -226,7 +300,7 @@ class UnifiedScreenshot:
                 self.capture_method = 'adb'
 
         if self.capture_method == 'adb':
-            self.adb_capture = AdbCapture(self.config.get('adb_config', {}))
+            self.adb_capture = AdbCapture(self.adb_config)
             log_info(f"Using ADB capture method: {self.capture_method}")
 
     def _load_config(self) -> dict:
@@ -263,7 +337,7 @@ class UnifiedScreenshot:
             return self.adb_capture.screenshot()
         else:
             # Initialize ADB capture if not already done
-            self.adb_capture = AdbCapture(self.config.get('adb_config', {}))
+            self.adb_capture = AdbCapture(self.adb_config)
             return self.adb_capture.screenshot()
 
     def get_screen_size(self) -> tuple:
