@@ -2,7 +2,7 @@ venv/
 __pycache__/
 tools/
 screenshots/
-test_*/
+# test_*/
 test_screenshots/
 Tesseract-OCR/
 standalone/
@@ -11,29 +11,29 @@ standalone/
 Thumbs.db
 
 # Test files
-test_*.py
-test_*.png
-test_*.jpg
-TEST_*.md
+# test_*.py
+# test_*.png
+# test_*.jpg
+# TEST_*.md
 
 # User configuration files (use .example files as templates)
 config.json
 event_priority.json
 training_score.json
 
-# Debug images and temporary files
-debug_*.png
-debug_*.jpg
-*.png.bak
-screenshot.png
+# # Debug images and temporary files
+# debug_*.png
+# debug_*.jpg
+# *.png.bak
+# screenshot.png
 
-# Test and debug scripts
-test_turn_detection.py
-test_choice_count.py
-debug_template_comparison.py
-test_failure_with_hover.py
-test_failure_simple.py
-fix_debug_messages.py
+# # Test and debug scripts
+# test_turn_detection.py
+# test_choice_count.py
+# debug_template_comparison.py
+# test_failure_with_hover.py
+# test_failure_simple.py
+# fix_debug_messages.py
 
 # Generated/temporary files
 temp_*.png
