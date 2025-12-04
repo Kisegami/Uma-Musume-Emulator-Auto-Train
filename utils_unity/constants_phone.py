@@ -4,7 +4,7 @@
 
 # Support card icon region (right side of screen)
 from utils.log import log_info, log_warning, log_error, log_debug, log_success
-SUPPORT_CARD_ICON_REGION=(828, 264, 1080, 1194)
+SUPPORT_CARD_ICON_REGION=(828, 240, 1080, 1194)
 
 # Mood region (top area)
 MOOD_REGION=(819, 211, 969, 274)
