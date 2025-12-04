@@ -44,6 +44,45 @@ def stat_state(screenshot=None):
     return result
 
 
+def check_dating_available(screenshot=None, confidence: float = 0.8) -> bool:
+    """
+    Check if a dating opportunity is available by scanning for the dating icon on screen.
+
+    Uses template matching against assets/icons/dating.png.
+
+    Args:
+        screenshot: Optional existing screenshot. If None, a new one is taken.
+        confidence: Template matching confidence threshold.
+
+    Returns:
+        bool: True if the dating icon is found, False otherwise.
+    """
+    try:
+        if screenshot is None:
+            screenshot = take_screenshot()
+
+        template_path = os.path.join("assets", "icons", "dating.png")
+
+        matches = match_template(screenshot, template_path, confidence)
+        found = bool(matches and len(matches) > 0)
+
+        log_debug(f"Dating icon found: {found}")
+
+        if DEBUG_MODE and found:
+            try:
+                x, y, w, h = matches[0]
+                crop = screenshot.crop((x, y, x + w, y + h))
+                crop.save("debug_dating_icon.png")
+                log_debug("Saved dating icon debug image to debug_dating_icon.png")
+            except Exception as e:
+                log_debug(f"Failed to save dating debug image: {e}")
+
+        return found
+    except Exception as e:
+        log_debug(f"check_dating_available failed: {e}")
+        return False
+
+
 # Old OCR fuzzy mood helper removed after switching to template-based detection
 
 def check_mood(screenshot=None):
@@ -211,7 +250,7 @@ def check_goal_name(screenshot=None):
     check_criteria (PSM 7, single line) with a single fallback to the
     shared extract_text helper.
     """
-    GOAL_REGION = (372, 113, 912, 152)
+    GOAL_REGION = (357, 113, 714, 155)
 
     # Capture enhanced image of the goal name region for better OCR
     goal_img = enhanced_screenshot(GOAL_REGION, screenshot)
