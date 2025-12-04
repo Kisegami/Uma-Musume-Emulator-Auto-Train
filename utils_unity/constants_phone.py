@@ -4,7 +4,7 @@
 
 # Support card icon region (right side of screen)
 from utils.log import log_info, log_warning, log_error, log_debug, log_success
-SUPPORT_CARD_ICON_REGION=(876, 253, 1080, 1171)
+SUPPORT_CARD_ICON_REGION=(828, 264, 1080, 1194)
 
 # Mood region (top area)
 MOOD_REGION=(819, 211, 969, 274)
@@ -16,7 +16,7 @@ TURN_REGION=(21, 149, 210, 239)
 FAILURE_REGION=(45, 1357, 1044, 1465)
 
 # Year region (top area)
-YEAR_REGION=(21, 66, 333, 96)
+YEAR_REGION=(249, 63, 561, 99)
 
 # Criteria region (top area)
 CRITERIA_REGION=(363, 153, 867, 201)
@@ -47,8 +47,8 @@ MOOD_LIST = ["AWFUL", "BAD", "NORMAL", "GOOD", "GREAT", "UNKNOWN"]
 # No hardcoded positions are needed - this ensures compatibility across different screen sizes 
 
 # Per-type failure rate regions (for direct number OCR)
-FAILURE_REGION_SPD = (109, 1404, 205, 1442)
-FAILURE_REGION_STA = (308, 1404, 389, 1442)
-FAILURE_REGION_PWR = (501, 1404, 579, 1442)
-FAILURE_REGION_GUTS = (691, 1404, 769, 1442)
-FAILURE_REGION_WIT = (881, 1404, 962, 1442) 
+FAILURE_REGION_SPD = (114, 1386, 204, 1425)
+FAILURE_REGION_STA = (306, 1386, 393, 1425)
+FAILURE_REGION_PWR = (495, 1386, 588, 1425)
+FAILURE_REGION_GUTS = (687, 1386, 777, 1425)
+FAILURE_REGION_WIT = (879, 1386, 966, 1425) 
