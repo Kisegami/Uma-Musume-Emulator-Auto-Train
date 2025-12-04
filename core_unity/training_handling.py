@@ -101,7 +101,7 @@ def check_training():
         swipe(start_x, start_y, end_x, end_y, duration_ms=100)  # Shorter duration for hover effect
         time.sleep(0.1)  # Wait for hover effect to register
         
-        # Step 2: One pass: capture screenshot, evaluate support counts, bond levels, and hint
+        # Step 2: One pass: capture screenshot, evaluate support counts, bond levels, hint, and spirit training
         screenshot = take_screenshot()
         left, top, right, bottom = SUPPORT_CARD_ICON_REGION
         region_cv = (left, top, right - left, bottom - top)
@@ -140,10 +140,13 @@ def check_training():
         # Hint - pass screenshot to avoid taking new one
         hint_found = check_hint(screenshot)  # ✅ Pass screenshot
 
-        # Calculate score for this training type
-        score = calculate_training_score(detailed_support, hint_found, key)
+        # Spirit/Unity training - pass screenshot to avoid taking new one
+        spirit_count = check_spirit_training(screenshot)
 
-        log_debug(f"Support counts: {support_counts} | hint_found={hint_found} | score={score}")
+        # Calculate score for this training type
+        score = calculate_training_score(detailed_support, hint_found, spirit_count, key)
+
+        log_debug(f"Support counts: {support_counts} | hint_found={hint_found} | spirit_count={spirit_count} | score={score}")
 
         log_debug(f"Checking failure rate for {key.upper()} training...")
         # Pass screenshot to avoid taking new ones
@@ -178,6 +181,7 @@ def check_training():
             log_info(f"-")
         
         log_info(f"hint={hint_found}")
+        log_info(f"spirit_training={spirit_count}")
         log_info(f"Fail: {failure_chance}% - Confident: {confidence:.2f}")
         log_info(f"Score: {score}")
         
@@ -333,6 +337,45 @@ def check_hint(screenshot, template_path: str = "assets/icons/hint.png", confide
     except Exception as e:
         log_debug(f" check_hint failed: {e}")
         return False
+
+
+def check_spirit_training(screenshot, template_path: str = "assets/unity/spirit_training.png", confidence: float = 0.8) -> int:
+    """
+    Detect number of Unity/Spirit training icons within the support card search region.
+
+    This uses the same SUPPORT_CARD_ICON_REGION as support cards and hint, and does
+    template matching with deduplication.
+
+    Args:
+        screenshot: Existing screenshot (PIL Image).
+        template_path: Path to the spirit training icon template image.
+        confidence: Minimum confidence threshold for template matching.
+
+    Returns:
+        int: Number of spirit training icons detected.
+    """
+    try:
+        # Convert PIL (left, top, right, bottom) to OpenCV (x, y, width, height)
+        left, top, right, bottom = SUPPORT_CARD_ICON_REGION
+        region_cv = (left, top, right - left, bottom - top)
+        log_debug(f" Checking spirit training in region: {region_cv} using template: {template_path}")
+
+        if DEBUG_MODE:
+            try:
+                screenshot.crop(SUPPORT_CARD_ICON_REGION).save("debug_spirit_training_region.png")
+                log_debug(f" Saved spirit training search region to debug_spirit_training_region.png")
+            except Exception:
+                pass
+
+        matches = match_template(screenshot, template_path, confidence, region_cv)
+        filtered = deduplicated_matches(matches, threshold=30) if matches else []
+
+        count = len(filtered)
+        log_debug(f" Spirit training icons found: {count}")
+        return count
+    except Exception as e:
+        log_debug(f" check_spirit_training failed: {e}")
+        return 0
 
 def check_failure(screenshot, train_type):
     """
@@ -568,7 +611,7 @@ def choose_best_training(training_results, config, current_stats):
     log_debug(f" Best training selected: {best_training} (score: {sorted_options[0][1].get('score', 0):.2f})")
     return best_training
 
-def calculate_training_score(support_detail, hint_found, training_type):
+def calculate_training_score(support_detail, hint_found, spirit_count, training_type):
     """
     Calculate training score based on support cards, bond levels, and hints.
     
@@ -580,21 +623,28 @@ def calculate_training_score(support_detail, hint_found, training_type):
     Returns:
         float: Calculated score for the training
     """
-    # Load scoring rules from training_score.json
+    # Load scoring rules from training_score_unity.json (preferred) or fallback to training_score.json
     scoring_rules = {}
     try:
-        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'training_score.json')
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        unity_path = os.path.join(base_dir, 'training_score_unity.json')
+        default_path = os.path.join(base_dir, 'training_score.json')
+
+        config_path = unity_path if os.path.exists(unity_path) else default_path
+
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
             scoring_rules = config.get('scoring_rules', {})
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-        log_warning(f"Could not load training_score.json: {e}")
+        log_warning(f"Could not load training score config: {e}")
         # Fallback to default values if config file is not available
         scoring_rules = {
             "rainbow_support": {"points": 1.0},
             "not_rainbow_support_low": {"points": 0.7},
             "not_rainbow_support_high": {"points": 0.0},
-            "hint": {"points": 0.3}
+            "hint": {"points": 0.3},
+            # keep key typo consistent with training_score_unity.json
+            "spririt_training": {"points": 0.5},
         }
     
     score = 0.0
@@ -616,5 +666,10 @@ def calculate_training_score(support_detail, hint_found, training_type):
     # Add hint bonus
     if hint_found:
         score += scoring_rules.get("hint", {}).get("points", 0.3)
+
+    # Add spirit/unity training bonus per icon found
+    if spirit_count and spirit_count > 0:
+        spirit_points = scoring_rules.get("spririt_training", {}).get("points", 0.5)
+        score += spirit_points * spirit_count
     
     return round(score, 2)
