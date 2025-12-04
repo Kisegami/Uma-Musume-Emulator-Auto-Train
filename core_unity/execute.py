@@ -289,6 +289,16 @@ def career_lobby():
             tap(center[0], center[1])
             continue
 
+        # Check clóe button
+        log_debug(f"Checking for close button...")
+        close_matches = match_template(screenshot, "assets/buttons/close.png", confidence=0.8)
+        if close_matches:
+            x, y, w, h = close_matches[0]
+            center = (x + w//2, y + h//2)
+            log_debug(f"Clicking close.png at position {center}")
+            tap(center[0], center[1])
+            continue
+
         # Check next button
         log_debug(f"Checking for next button...")
         next_matches = match_template(screenshot, "assets/buttons/next_btn.png", confidence=0.8)
