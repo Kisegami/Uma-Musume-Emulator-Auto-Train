@@ -1,6 +1,6 @@
 import time
 import json
-from PIL import ImageStat, Image, ImageEnhance
+from PIL import ImageStat, Image, ImageEnhance, ImageDraw, ImageFont
 import numpy as np
 import pytesseract
 import re
@@ -70,7 +70,11 @@ def _filtered_template_matches(screenshot, template_path, region_cv, confidence=
 def go_to_training():
     """Go to training screen"""
     log_debug(f"Going to training screen...")
-    return tap_on_image("assets/buttons/training_btn.png", min_search=10)
+    success = tap_on_image("assets/buttons/training_btn.png", min_search=10)
+    if success:
+        # Wait 500 ms after pressing training button to allow screen to stabilize
+        time.sleep(0.5)
+    return success
 
 def check_training():
     """Check training results using fixed coordinates, collecting support counts,
@@ -141,12 +145,17 @@ def check_training():
         hint_found = check_hint(screenshot)  # ✅ Pass screenshot
 
         # Spirit/Unity training - pass screenshot to avoid taking new one
-        spirit_count = check_spirit_training(screenshot)
+        spirit_count = check_spirit_training(screenshot, train_type=key)
+        # Spirit burst - pass screenshot to avoid taking new one
+        spirit_burst_count = check_spirit_burst(screenshot, train_type=key)
 
         # Calculate score for this training type
-        score = calculate_training_score(detailed_support, hint_found, spirit_count, key)
+        score = calculate_training_score(detailed_support, hint_found, spirit_count, spirit_burst_count, key)
 
-        log_debug(f"Support counts: {support_counts} | hint_found={hint_found} | spirit_count={spirit_count} | score={score}")
+        log_debug(
+            f"Support counts: {support_counts} | hint_found={hint_found} | "
+            f"spirit_count={spirit_count} | spirit_burst_count={spirit_burst_count} | score={score}"
+        )
 
         log_debug(f"Checking failure rate for {key.upper()} training...")
         # Pass screenshot to avoid taking new ones
@@ -182,8 +191,23 @@ def check_training():
         
         log_info(f"hint={hint_found}")
         log_info(f"spirit_training={spirit_count}")
+        log_info(f"spirit_burst={spirit_burst_count}")
         log_info(f"Fail: {failure_chance}% - Confident: {confidence:.2f}")
         log_info(f"Score: {score}")
+
+        # Save per-stat debug overlay when in debug mode (used by failure_all test)
+        if DEBUG_MODE:
+            _save_training_debug_overlay(
+                screenshot=screenshot,
+                training_type=key,
+                detailed_support=detailed_support,
+                hint_found=hint_found,
+                spirit_count=spirit_count,
+                spirit_burst_count=spirit_burst_count,
+                failure_chance=failure_chance,
+                confidence=confidence,
+                score=score,
+            )
         
 
     
@@ -339,31 +363,27 @@ def check_hint(screenshot, template_path: str = "assets/icons/hint.png", confide
         return False
 
 
-def check_spirit_training(screenshot, template_path: str = "assets/unity/spirit_training.png", confidence: float = 0.8) -> int:
-    """
-    Detect number of Unity/Spirit training icons within the support card search region.
-
-    This uses the same SUPPORT_CARD_ICON_REGION as support cards and hint, and does
-    template matching with deduplication.
-
-    Args:
-        screenshot: Existing screenshot (PIL Image).
-        template_path: Path to the spirit training icon template image.
-        confidence: Minimum confidence threshold for template matching.
-
-    Returns:
-        int: Number of spirit training icons detected.
-    """
+def _detect_unity_icon(
+    screenshot,
+    template_path: str,
+    debug_prefix: str,
+    confidence: float = 0.8,
+    train_type: str = "",
+) -> int:
+    """Generic detector for unity-related icons (spirit training / burst)."""
     try:
         # Convert PIL (left, top, right, bottom) to OpenCV (x, y, width, height)
         left, top, right, bottom = SUPPORT_CARD_ICON_REGION
         region_cv = (left, top, right - left, bottom - top)
-        log_debug(f" Checking spirit training in region: {region_cv} using template: {template_path}")
+        log_debug(f" Checking {debug_prefix} in region: {region_cv} using template: {template_path}")
 
         if DEBUG_MODE:
             try:
-                screenshot.crop(SUPPORT_CARD_ICON_REGION).save("debug_spirit_training_region.png")
-                log_debug(f" Saved spirit training search region to debug_spirit_training_region.png")
+                # If we know which training type we're checking, save per-stat debug image
+                suffix = f"_{train_type.lower()}" if train_type else ""
+                fname = f"debug_{debug_prefix}_region{suffix}.png"
+                screenshot.crop(SUPPORT_CARD_ICON_REGION).save(fname)
+                log_debug(f" Saved {debug_prefix} search region to {fname}")
             except Exception:
                 pass
 
@@ -371,11 +391,163 @@ def check_spirit_training(screenshot, template_path: str = "assets/unity/spirit_
         filtered = deduplicated_matches(matches, threshold=30) if matches else []
 
         count = len(filtered)
-        log_debug(f" Spirit training icons found: {count}")
+        log_debug(f" {debug_prefix} icons found: {count}")
         return count
     except Exception as e:
-        log_debug(f" check_spirit_training failed: {e}")
+        log_debug(f" {_detect_unity_icon.__name__} failed for {debug_prefix}: {e}")
         return 0
+
+
+def check_spirit_training(
+    screenshot,
+    template_path: str = "assets/unity/spirit_training.png",
+    confidence: float = 0.8,
+    train_type: str = "",
+) -> int:
+    """
+    Detect number of Unity/Spirit training icons within the support card search region.
+
+    Uses SUPPORT_CARD_ICON_REGION and template matching with deduplication.
+    """
+    return _detect_unity_icon(
+        screenshot,
+        template_path=template_path,
+        debug_prefix="spirit_training",
+        confidence=confidence,
+        train_type=train_type,
+    )
+
+
+def check_spirit_burst(
+    screenshot,
+    template_path: str = "assets/unity/spirit_burst.png",
+    confidence: float = 0.8,
+    train_type: str = "",
+) -> int:
+    """
+    Detect number of Spirit Burst icons within the support card search region.
+
+    Uses SUPPORT_CARD_ICON_REGION and template matching with deduplication.
+    """
+    return _detect_unity_icon(
+        screenshot,
+        template_path=template_path,
+        debug_prefix="spirit_burst",
+        confidence=confidence,
+        train_type=train_type,
+    )
+
+
+def _save_training_debug_overlay(
+    screenshot,
+    training_type: str,
+    detailed_support,
+    hint_found: bool,
+    spirit_count: int,
+    spirit_burst_count: int,
+    failure_chance: int,
+    confidence: float,
+    score: float,
+):
+    """
+    Save a debug image per stat with:
+    - failure region box
+    - support card bounding boxes
+    - summary text including calculation values
+    Used primarily by the failure_all test.
+    """
+    try:
+        img = screenshot.convert("RGB").copy()
+        draw = ImageDraw.Draw(img)
+
+        # Draw failure region box for this training type
+        region_map = {
+            "spd": FAILURE_REGION_SPD,
+            "sta": FAILURE_REGION_STA,
+            "pwr": FAILURE_REGION_PWR,
+            "guts": FAILURE_REGION_GUTS,
+            "wit": FAILURE_REGION_WIT,
+        }
+        t_key = training_type.lower()
+        if t_key in region_map:
+            left, top, right, bottom = region_map[t_key]
+            draw.rectangle([left, top, right, bottom], outline="red", width=3)
+            draw.text((left + 3, top + 3), f"{training_type.upper()} FAIL", fill="red")
+
+        # Draw support card bounding boxes
+        color_map = {
+            "spd": "yellow",
+            "sta": "orange",
+            "pwr": "cyan",
+            "guts": "magenta",
+            "wit": "white",
+            "friend": "lime",
+        }
+        for card_type, entries in detailed_support.items():
+            color = color_map.get(card_type, "white")
+            for entry in entries:
+                x, y, w, h = entry["bbox"]
+                draw.rectangle([x, y, x + w, y + h], outline=color, width=2)
+
+        # Summary text with calculations
+        summary_lines = [
+            f"[{training_type.upper()}]",
+            f"Fail: {failure_chance}%  Conf: {confidence:.2f}",
+            f"Score: {score:.2f}",
+            f"Hint: {hint_found}",
+            f"Spirit: {spirit_count}",
+            f"Burst: {spirit_burst_count}",
+        ]
+        # Try a larger font for readability
+        try:
+            font = ImageFont.truetype("arial.ttf", 24)
+        except Exception:
+            font = ImageFont.load_default()
+
+        y0 = 10
+        for line in summary_lines:
+            # Shadow
+            draw.text((12, y0 + 2), line, fill="black", font=font)
+            # Main text in yellow
+            draw.text((10, y0), line, fill="yellow", font=font)
+            y0 += 26
+
+        # Draw hint / spirit training / spirit burst icon bounding boxes in SUPPORT_CARD_ICON_REGION
+        left_s, top_s, right_s, bottom_s = SUPPORT_CARD_ICON_REGION
+        region_cv = (left_s, top_s, right_s - left_s, bottom_s - top_s)
+
+        # Hint icon boxes
+        try:
+            hint_tpl = "assets/icons/hint.png"
+            hint_matches = match_template(screenshot, hint_tpl, 0.8, region_cv)
+            for (x, y, w, h) in hint_matches or []:
+                draw.rectangle([x, y, x + w, y + h], outline="yellow", width=2)
+        except Exception as e:
+            log_debug(f"Failed to draw hint boxes in overlay: {e}")
+
+        # Spirit training icon boxes
+        try:
+            spirit_train_tpl = "assets/unity/spirit_training.png"
+            spirit_train_matches = match_template(screenshot, spirit_train_tpl, 0.8, region_cv)
+            for (x, y, w, h) in spirit_train_matches or []:
+                draw.rectangle([x, y, x + w, y + h], outline="lime", width=2)
+        except Exception as e:
+            log_debug(f"Failed to draw spirit training boxes in overlay: {e}")
+
+        # Spirit burst icon boxes
+        try:
+            spirit_burst_tpl = "assets/unity/spirit_burst.png"
+            spirit_burst_matches = match_template(screenshot, spirit_burst_tpl, 0.8, region_cv)
+            for (x, y, w, h) in spirit_burst_matches or []:
+                draw.rectangle([x, y, x + w, y + h], outline="orange", width=2)
+        except Exception as e:
+            log_debug(f"Failed to draw spirit burst boxes in overlay: {e}")
+
+        fname = f"debug_training_{training_type.lower()}.png"
+        img.save(fname)
+        log_debug(f"Saved training debug overlay for {training_type.upper()} to {fname}")
+    except Exception as e:
+        log_debug(f"Failed to save training debug overlay for {training_type.upper()}: {e}")
 
 def check_failure(screenshot, train_type):
     """
@@ -611,7 +783,7 @@ def choose_best_training(training_results, config, current_stats):
     log_debug(f" Best training selected: {best_training} (score: {sorted_options[0][1].get('score', 0):.2f})")
     return best_training
 
-def calculate_training_score(support_detail, hint_found, spirit_count, training_type):
+def calculate_training_score(support_detail, hint_found, spirit_count, spirit_burst_count, training_type):
     """
     Calculate training score based on support cards, bond levels, and hints.
     
@@ -645,6 +817,7 @@ def calculate_training_score(support_detail, hint_found, spirit_count, training_
             "hint": {"points": 0.3},
             # keep key typo consistent with training_score_unity.json
             "spririt_training": {"points": 0.5},
+            "spirit_burst": {"points": 1.0},
         }
     
     score = 0.0
@@ -671,5 +844,10 @@ def calculate_training_score(support_detail, hint_found, spirit_count, training_
     if spirit_count and spirit_count > 0:
         spirit_points = scoring_rules.get("spririt_training", {}).get("points", 0.5)
         score += spirit_points * spirit_count
+
+    # Add spirit burst bonus per icon found
+    if spirit_burst_count and spirit_burst_count > 0:
+        burst_points = scoring_rules.get("spirit_burst", {}).get("points", 1.0)
+        score += burst_points * spirit_burst_count
     
     return round(score, 2)
