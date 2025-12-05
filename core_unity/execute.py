@@ -31,6 +31,7 @@ from core_unity.event_handling import count_event_choices, load_event_priorities
 
 # Import training handling functions
 from core_unity.training_handling import go_to_training, check_training, do_train, check_support_card, check_failure, check_hint, choose_best_training, calculate_training_score
+from core_unity.unity_race_handling import unity_race_workflow
 
 # Import race handling functions
 from core_unity.races_handling import (
@@ -268,6 +269,18 @@ def career_lobby():
             log_error(f"Event handling error: {e}")
         except Exception as e:
             log_error(f"Event handling error: {e}")
+
+        # Check for Unity Cup (Unity race workflow)
+        log_debug(f"Checking for Unity Cup...")
+        unity_cup = locate_on_screen("assets/unity/unity_cup.png", confidence=0.8)
+        if unity_cup:
+            log_info(f"Unity Cup detected, starting Unity race workflow...")
+            try:
+                if unity_race_workflow():
+                    log_info(f"Unity race workflow completed.")
+                    continue
+            except Exception as e:
+                log_warning(f"Unity race workflow failed: {e}")
 
         # Check inspiration button
         log_debug(f"Checking for inspiration...")
