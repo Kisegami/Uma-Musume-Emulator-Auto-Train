@@ -33,6 +33,9 @@ from core_unity.event_handling import count_event_choices, load_event_priorities
 from core_unity.training_handling import go_to_training, check_training, do_train, check_support_card, check_failure, check_hint, choose_best_training, calculate_training_score
 from core_unity.unity_race_handling import unity_race_workflow
 
+# Import dating handling functions
+from core_unity.dating_handling import do_dating, should_use_dating_for_mood, should_use_dating_for_rest
+
 # Import race handling functions
 from core_unity.races_handling import (
     find_and_do_race, do_custom_race, race_day, check_strategy_before_race,
@@ -159,6 +162,7 @@ def do_rest():
         log_debug(f"No rest button found in lobby")
         log_warning(f"No rest button found in lobby")
     time.sleep(3)
+
 
 def do_recreation():
     """Perform recreation action"""
@@ -488,9 +492,18 @@ def career_lobby():
                 log_debug(f"Mood too low ({mood_index} < {minimum_mood}) but energy too high ({energy_percentage:.1f}% > 90%), skipping recreation")
                 log_info(f"Mood is low but energy is too high ({energy_percentage:.1f}% > 90%), skipping recreation")
             else:
-                log_debug(f"Mood too low ({mood_index} < {minimum_mood}), doing recreation")
-                log_info(f"Mood is low, trying recreation to increase mood")
-                scenario.do_recreation()
+                log_debug(f"Mood too low ({mood_index} < {minimum_mood}), checking for dating or recreation")
+                # Check if dating should be used instead of recreation
+                if should_use_dating_for_mood(screenshot):
+                    log_info(f"Mood is low, using dating to increase mood")
+                    if do_dating():
+                        log_info(f"Dating initiated successfully")
+                    else:
+                        log_warning(f"Dating failed, falling back to recreation")
+                        do_recreation()
+                else:
+                    log_info(f"Mood is low, trying recreation to increase mood")
+                    do_recreation()
                 continue
         else:
             log_debug(f"Mood is good ({mood_index} >= {minimum_mood})")
@@ -501,7 +514,13 @@ def career_lobby():
         # Check energy before proceeding with training
         if energy_percentage < min_energy:
             log_warning(f"Energy too low ({energy_percentage:.1f}% < {min_energy}%), skipping training and going to rest")
-            do_rest()
+            if should_use_dating_for_rest(screenshot):
+                log_info(f"Using dating instead of rest")
+                if not do_dating():
+                    log_warning(f"Dating failed, falling back to rest")
+                    do_rest()
+            else:
+                do_rest()
             continue
             
         if not go_to_training():
@@ -556,7 +575,13 @@ def career_lobby():
                     wit_score = results_training.get('wit', {}).get('score', 0)
                     if wit_score < 1.0:
                         log_info(f"All training options unsafe and WIT score < 1.0. Choosing to rest.")
-                        do_rest()
+                        if should_use_dating_for_rest(screenshot):
+                            log_info(f"Using dating instead of rest")
+                            if not do_dating():
+                                log_warning(f"Dating failed, falling back to rest")
+                                do_rest()
+                        else:
+                            do_rest()
                         continue
                     else:
                         # Try to pick a training with relaxed thresholds despite high failure context
@@ -572,7 +597,13 @@ def career_lobby():
                             continue
                         else:
                             log_info(f"No viable training even after relaxed selection. Choosing to rest.")
-                            do_rest()
+                            if should_use_dating_for_rest(screenshot):
+                                log_info(f"Using dating instead of rest")
+                                if not do_dating():
+                                    log_warning(f"Dating failed, falling back to rest")
+                                    do_rest()
+                            else:
+                                do_rest()
                             continue
                 else:
                     # Check if racing is available (no races in July/August)
@@ -595,10 +626,22 @@ def career_lobby():
                             wit_score = results_training.get('wit', {}).get('score', 0)
                             if wit_score < 1.0:
                                 log_info(f"No viable training after relaxation and no races. Choosing to rest.")
-                                do_rest()
+                                if should_use_dating_for_rest(screenshot):
+                                    log_info(f"Using dating instead of rest")
+                                    if not do_dating():
+                                        log_warning(f"Dating failed, falling back to rest")
+                                        do_rest()
+                                else:
+                                    do_rest()
                             else:
                                 log_info(f"No training selected after relaxation. Choosing to rest.")
-                                do_rest()
+                                if should_use_dating_for_rest(screenshot):
+                                    log_info(f"Using dating instead of rest")
+                                    if not do_dating():
+                                        log_warning(f"Dating failed, falling back to rest")
+                                        do_rest()
+                                else:
+                                    do_rest()
                         
                     else:
                         log_info(f"Prioritizing race due to insufficient training scores.")
@@ -627,15 +670,33 @@ def career_lobby():
                                 wit_score = results_training.get('wit', {}).get('score', 0)
                                 if wit_score < 1.0:
                                     log_info(f"No viable training after relaxation and race not found. Choosing to rest.")
-                                    do_rest()
+                                    if should_use_dating_for_rest(screenshot):
+                                        log_info(f"Using dating instead of rest")
+                                        if not do_dating():
+                                            log_warning(f"Dating failed, falling back to rest")
+                                            do_rest()
+                                    else:
+                                        do_rest()
                                 else:
                                     log_info(f"No training selected after relaxation. Choosing to rest.")
-                                    do_rest()
+                                    if should_use_dating_for_rest(screenshot):
+                                        log_info(f"Using dating instead of rest")
+                                        if not do_dating():
+                                            log_warning(f"Dating failed, falling back to rest")
+                                            do_rest()
+                                    else:
+                                        do_rest()
             else:
                 # Race prioritization disabled: min_score already 0 at initial selection,
                 # so if no training was chosen here, rest (still enforcing failure and min_wit_score)
                 log_info(f"Race prioritization disabled and no valid training found (min_score ignored). Choosing to rest.")
-                do_rest()
+                if should_use_dating_for_rest(screenshot):
+                    log_info(f"Using dating instead of rest")
+                    if not do_dating():
+                        log_warning(f"Dating failed, falling back to rest")
+                        do_rest()
+                else:
+                    do_rest()
         
         log_debug(f"Waiting before next iteration...")
         time.sleep(1)

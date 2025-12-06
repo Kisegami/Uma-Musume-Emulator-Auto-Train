@@ -74,6 +74,9 @@
     "support_rarity": "SSR",
     "auto_charge_tp": true
   },
+  "dating": {
+    "use_dating_instead_of_rest": false
+  },
   "debug_mode": false,
   "stop_on_event_detection_failure": false
 }

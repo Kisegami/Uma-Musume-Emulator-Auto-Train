@@ -1,10 +1,10 @@
 import time
 from typing import List, Tuple, Optional
 
-from utils.recognizer import locate_on_screen, match_template
+from utils.recognizer import match_template
 from utils.template_matching import deduplicated_matches
 from utils.screenshot import take_screenshot
-from utils.input import tap
+from utils.input import tap, wait_and_tap
 from utils.log import log_info, log_debug, log_warning
 
 # Regions (x1, y1, x2, y2)
@@ -72,22 +72,6 @@ def _pick_best_opponent(team_rank: str, opponents: List[Tuple[str, Tuple[int, in
 def _center_of_bbox(bbox: Tuple[int, int, int, int]) -> Tuple[int, int]:
     x, y, w, h = bbox
     return x + w // 2, y + h // 2
-
-
-def wait_and_tap(image_path: str, timeout: float = 10.0, check_interval: float = 0.2, confidence: float = 0.8) -> bool:
-    """
-    Poll locate_on_screen until image appears (up to timeout), then tap center.
-    """
-    start = time.time()
-    while time.time() - start < timeout:
-        res = locate_on_screen(image_path, confidence=confidence)
-        if res:
-            cx, cy = res
-            tap(cx, cy)
-            return True
-        time.sleep(check_interval)
-    log_warning(f"wait_and_tap: {image_path} not found within timeout.")
-    return False
 
 
 def unity_race_workflow():
