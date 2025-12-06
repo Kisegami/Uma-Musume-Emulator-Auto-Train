@@ -199,7 +199,7 @@ def setup_adb_config():
         print("\n✓ ADB configuration completed successfully!")
         print("\nNext steps:")
         print("1. Run: python test_adb_setup.py")
-        print("2. Adjust regions in utils/constants_phone.py")
+        print("2. Adjust regions in utils/constants_ura.py (for URA) or utils/constants_unity.py (for Unity)")
         print("3. Run: python main.py")
         return True
     else:

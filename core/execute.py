@@ -19,7 +19,7 @@ if os.name == 'nt':  # Windows
 from utils.recognizer import locate_on_screen, locate_all_on_screen, is_image_on_screen, match_template, max_match_confidence
 from utils.input import tap, triple_click, long_press, tap_on_image
 from utils.screenshot import take_screenshot, enhanced_screenshot, capture_region
-from utils.constants_phone import (
+from utils.constants_ura import (
     MOOD_LIST, EVENT_REGION, RACE_CARD_REGION, SUPPORT_CARD_ICON_REGION
 )
 

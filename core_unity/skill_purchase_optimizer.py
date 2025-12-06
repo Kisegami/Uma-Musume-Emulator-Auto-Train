@@ -3,7 +3,7 @@ import os
 import sys
 from difflib import SequenceMatcher
 from core_unity.skill_recognizer import scan_all_skills_with_scroll
-from utils_unity.log import log_debug, log_info, log_warning, log_error
+from utils.log import log_debug, log_info, log_warning, log_error
 
 # Global cache for skill names
 _all_skill_names = None
@@ -40,7 +40,7 @@ if os.name == 'nt':  # Windows
     except:
         pass
 
-# debug_print is imported from utils_unity.log
+# debug_print is imported from utils.log
 
 def load_skill_config(config_path=None):
     """

@@ -1,11 +1,11 @@
 import time
 from typing import List, Tuple, Optional
 
-from utils_unity.recognizer import locate_on_screen, match_template
-from utils_unity.template_matching import deduplicated_matches
-from utils_unity.screenshot import take_screenshot
-from utils_unity.input import tap
-from utils_unity.log import log_info, log_debug, log_warning
+from utils.recognizer import locate_on_screen, match_template
+from utils.template_matching import deduplicated_matches
+from utils.screenshot import take_screenshot
+from utils.input import tap
+from utils.log import log_info, log_debug, log_warning
 
 # Regions (x1, y1, x2, y2)
 TEAM_RANK_REGION = (0, 48, 270, 201)

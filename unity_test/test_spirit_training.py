@@ -19,11 +19,11 @@ from typing import List, Tuple
 
 from PIL import ImageDraw
 
-from utils_unity.log import log_info, log_warning, log_error, log_debug
-from utils_unity.screenshot import take_screenshot
-from utils_unity.recognizer import match_template
-from utils_unity.template_matching import deduplicated_matches
-from utils_unity.constants_phone import SUPPORT_CARD_ICON_REGION
+from utils.log import log_info, log_warning, log_error, log_debug
+from utils.screenshot import take_screenshot
+from utils.recognizer import match_template
+from utils.template_matching import deduplicated_matches
+from utils.constants_unity import SUPPORT_CARD_ICON_REGION
 
 
 TEMPLATE_PATH = "assets/unity/spirit_training.png"

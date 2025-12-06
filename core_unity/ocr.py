@@ -27,7 +27,7 @@ with open("config.json", "r", encoding="utf-8") as config_file:
     config = json.load(config_file)
     DEBUG_MODE = config.get("debug_mode", False)
 
-from utils_unity.log import log_debug, log_info, log_warning, log_error
+from utils.log import log_debug, log_info, log_warning, log_error
 
 # Try to find tesseract executable automatically
 try:

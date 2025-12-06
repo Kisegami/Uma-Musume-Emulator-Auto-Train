@@ -4,14 +4,14 @@ import json
 import os
 
 from PIL import Image, ImageEnhance
-from utils_unity.screenshot import capture_region, enhanced_screenshot, enhanced_screenshot_for_failure, enhanced_screenshot_for_year, take_screenshot
+from utils.screenshot import capture_region, enhanced_screenshot, enhanced_screenshot_for_failure, enhanced_screenshot_for_year, take_screenshot
 from core_unity.ocr import extract_text, extract_number, extract_turn_number, extract_failure_text, extract_failure_text_with_confidence
-from utils_unity.recognizer import match_template, max_match_confidence
+from utils.recognizer import match_template, max_match_confidence
 from core_unity.skill_auto_purchase import execute_skill_purchases, click_image_button, extract_skill_points
 from core_unity.skill_recognizer import scan_all_skills_with_scroll
 from core_unity.skill_purchase_optimizer import load_skill_config, create_purchase_plan, filter_affordable_skills
 
-from utils_unity.constants_phone import (
+from utils.constants_unity import (
     SUPPORT_CARD_ICON_REGION, TURN_REGION, FAILURE_REGION, YEAR_REGION, 
     CRITERIA_REGION, SPD_REGION, STA_REGION, PWR_REGION, GUTS_REGION, WIT_REGION,
     SKILL_PTS_REGION, FAILURE_REGION_SPD, FAILURE_REGION_STA, FAILURE_REGION_PWR, FAILURE_REGION_GUTS, FAILURE_REGION_WIT
@@ -22,8 +22,8 @@ with open("config.json", "r", encoding="utf-8") as config_file:
     config = json.load(config_file)
     DEBUG_MODE = config.get("debug_mode", False)
 
-from utils_unity.log import log_debug, log_info, log_warning, log_error
-from utils_unity.template_matching import deduplicated_matches
+from utils.log import log_debug, log_info, log_warning, log_error
+from utils.template_matching import deduplicated_matches
 
 # Get Stat
 def stat_state(screenshot=None):
@@ -443,8 +443,8 @@ def check_current_stats(screenshot=None):
     Returns:
         dict: Dictionary of current stats with keys: spd, sta, pwr, guts, wit
     """
-    from utils_unity.constants_phone import SPD_REGION, STA_REGION, PWR_REGION, GUTS_REGION, WIT_REGION
-    from utils_unity.screenshot import take_screenshot
+    from utils.constants_unity import SPD_REGION, STA_REGION, PWR_REGION, GUTS_REGION, WIT_REGION
+    from utils.screenshot import take_screenshot
     import pytesseract
     from PIL import Image, ImageEnhance
     
@@ -509,7 +509,7 @@ def check_energy_bar(screenshot=None, debug_visualization=False):
     try:
         import cv2
         import numpy as np
-        from utils_unity.screenshot import take_screenshot
+        from utils.screenshot import take_screenshot
 
         if screenshot is None:
             screenshot = take_screenshot()

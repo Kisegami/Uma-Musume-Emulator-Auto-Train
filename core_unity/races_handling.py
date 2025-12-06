@@ -5,11 +5,11 @@ import numpy as np
 import pytesseract
 from PIL import ImageStat
 
-from utils_unity.recognizer import locate_on_screen, match_template, locate_all_on_screen, max_match_confidence
-from utils_unity.input import tap, triple_click, long_press, tap_on_image, swipe
-from utils_unity.screenshot import take_screenshot
-from utils_unity.template_matching import wait_for_image, deduplicated_matches
-from utils_unity.log import log_debug, log_info, log_warning, log_error, log_success
+from utils.recognizer import locate_on_screen, match_template, locate_all_on_screen, max_match_confidence
+from utils.input import tap, triple_click, long_press, tap_on_image, swipe
+from utils.screenshot import take_screenshot
+from utils.template_matching import wait_for_image, deduplicated_matches
+from utils.log import log_debug, log_info, log_warning, log_error, log_success
 from core_unity.state import check_skill_points_cap, check_current_year
 from core_unity.ocr import extract_text
 

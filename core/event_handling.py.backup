@@ -326,7 +326,7 @@ def handle_event_choice():
         tuple: (choice_number, success, choice_locations) - choice number, success status, and found locations
     """
     # Define the region for event name detection
-    from utils.constants_phone import EVENT_REGION
+    from utils.constants_ura import EVENT_REGION
     event_region = EVENT_REGION
     
     log_info(f"Event detected, scan event")

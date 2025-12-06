@@ -2,7 +2,7 @@ import time
 import subprocess
 import json
 import sys
-from utils_unity.log import log_info, log_warning, log_error, log_success
+from utils.log import log_info, log_warning, log_error, log_success
 import os
 
 # Fix Windows console encoding for Unicode support
@@ -16,11 +16,11 @@ if os.name == 'nt':  # Windows
     except:
         pass
 
-from utils_unity.screenshot import get_screen_size, load_config
-from utils_unity.device import run_adb
+from utils.screenshot import get_screen_size, load_config
+from utils.device import run_adb
 from core_unity.execute import career_lobby
 
-# Logging is now handled by utils_unity.log module
+# Logging is now handled by utils.log module
 
 def check_adb_connection():
     """Check if ADB is connected to a device"""

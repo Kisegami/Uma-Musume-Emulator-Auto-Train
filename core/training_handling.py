@@ -9,7 +9,7 @@ import os
 from utils.recognizer import locate_on_screen, locate_all_on_screen, is_image_on_screen, match_template, max_match_confidence
 from utils.input import tap, triple_click, swipe, tap_on_image
 from utils.screenshot import take_screenshot, enhanced_screenshot
-from utils.constants_phone import *
+from utils.constants_ura import *
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import wait_for_image, deduplicated_matches
 
@@ -344,7 +344,7 @@ def check_failure(screenshot, train_type):
         (rate, confidence)
     """
     log_debug(f" ===== STARTING FAILURE DETECTION for {train_type.upper()} =====")
-    from utils.constants_phone import FAILURE_REGION_SPD, FAILURE_REGION_STA, FAILURE_REGION_PWR, FAILURE_REGION_GUTS, FAILURE_REGION_WIT
+    from utils.constants_ura import FAILURE_REGION_SPD, FAILURE_REGION_STA, FAILURE_REGION_PWR, FAILURE_REGION_GUTS, FAILURE_REGION_WIT
     from utils.screenshot import enhanced_screenshot, take_screenshot
     import numpy as np
     import pytesseract

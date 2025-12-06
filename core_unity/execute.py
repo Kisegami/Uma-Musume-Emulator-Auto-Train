@@ -16,10 +16,10 @@ if os.name == 'nt':  # Windows
     except:
         pass
 
-from utils_unity.recognizer import locate_on_screen, locate_all_on_screen, is_image_on_screen, match_template, max_match_confidence
-from utils_unity.input import tap, triple_click, long_press, tap_on_image
-from utils_unity.screenshot import take_screenshot, enhanced_screenshot, capture_region
-from utils_unity.constants_phone import (
+from utils.recognizer import locate_on_screen, locate_all_on_screen, is_image_on_screen, match_template, max_match_confidence
+from utils.input import tap, triple_click, long_press, tap_on_image
+from utils.screenshot import take_screenshot, enhanced_screenshot, capture_region
+from utils.constants_unity import (
     MOOD_LIST, EVENT_REGION, RACE_CARD_REGION, SUPPORT_CARD_ICON_REGION
 )
 
@@ -46,8 +46,8 @@ with open("config.json", "r", encoding="utf-8") as config_file:
     DEBUG_MODE = config.get("debug_mode", False)
     RETRY_RACE = config.get("retry_race", True)
 
-from utils_unity.log import log_debug, log_info, log_warning, log_error, log_success
-from utils_unity.template_matching import deduplicated_matches, wait_for_image
+from utils.log import log_debug, log_info, log_warning, log_error, log_success
+from utils.template_matching import deduplicated_matches, wait_for_image
 
 def is_infirmary_active_adb(button_location, screenshot=None):
     """
@@ -63,7 +63,7 @@ def is_infirmary_active_adb(button_location, screenshot=None):
         
         # Use provided screenshot or take new one if not provided
         if screenshot is None:
-            from utils_unity.screenshot import take_screenshot
+            from utils.screenshot import take_screenshot
             screenshot = take_screenshot()
         
         # Crop the button region from the screenshot
@@ -116,12 +116,12 @@ def do_rest():
     
     # Rest button is in the lobby, not on training screen
     # If we're on training screen, go back to lobby first
-    from utils_unity.recognizer import locate_on_screen
+    from utils.recognizer import locate_on_screen
     back_btn = locate_on_screen("assets/buttons/back_btn.png", confidence=0.8)
     if back_btn:
         log_debug(f"Going back to lobby to find rest button...")
         log_info(f"Going back to lobby to find rest button...")
-        from utils_unity.input import tap
+        from utils.input import tap
         tap(back_btn[0], back_btn[1])
         time.sleep(1.0)  # Wait for lobby to load
     tazuna_hint = locate_on_screen("assets/ui/tazuna_hint.png", confidence=0.7)
@@ -129,7 +129,7 @@ def do_rest():
         log_debug(f"tazuna_hint.png not found, taking screenshot again to ensure we are in the lobby...")
         time.sleep(0.7)
         # Take a new screenshot and try again
-        from utils_unity.screenshot import take_screenshot
+        from utils.screenshot import take_screenshot
         take_screenshot()
         tazuna_hint = locate_on_screen("assets/ui/tazuna_hint.png", confidence=0.7)
         if not tazuna_hint:
@@ -144,14 +144,14 @@ def do_rest():
     if rest_btn:
         log_debug(f"Clicking rest button at {rest_btn}")
         log_info(f"Clicking rest button at {rest_btn}")
-        from utils_unity.input import tap
+        from utils.input import tap
         tap(rest_btn[0], rest_btn[1])
         log_debug(f"Clicked rest button")
         log_info(f"Rest button clicked")
     elif rest_summer_btn:
         log_debug(f"Clicking summer rest button at {rest_summer_btn}")
         log_info(f"Clicking summer rest button at {rest_summer_btn}")
-        from utils_unity.input import tap
+        from utils.input import tap
         tap(rest_summer_btn[0], rest_summer_btn[1])
         log_debug(f"Clicked summer rest button")
         log_info(f"Summer rest button clicked")

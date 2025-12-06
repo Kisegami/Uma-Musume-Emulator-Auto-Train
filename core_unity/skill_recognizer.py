@@ -5,10 +5,10 @@ import os
 import time
 import re
 import json
-from utils_unity.screenshot import take_screenshot
-from utils_unity.device import run_adb
+from utils.screenshot import take_screenshot
+from utils.device import run_adb
 
-from utils_unity.log import log_debug, log_info, log_warning, log_error
+from utils.log import log_debug, log_info, log_warning, log_error
 
 try:
     import pytesseract

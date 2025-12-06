@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from utils_unity.log import log_info, log_warning, log_error, log_debug, log_success
+from utils.log import log_info, log_warning, log_error, log_debug, log_success
 """
 Restart Career functionality for Uma Musume Emulator Auto Train.
 Handles career completion and auto-restart based on configuration.
@@ -14,9 +14,9 @@ from typing import Dict, Any, Optional, Tuple
 # Add the project root to the path so we can import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils_unity.recognizer import match_template
-from utils_unity.screenshot import take_screenshot
-from utils_unity.input import tap
+from utils.recognizer import match_template
+from utils.screenshot import take_screenshot
+from utils.input import tap
 from core_unity.skill_auto_purchase import click_image_button
 from core_unity.ocr import extract_text, extract_number
 
@@ -226,7 +226,7 @@ def load_config():
         return {}
 
 
-from utils_unity.template_matching import wait_for_image
+from utils.template_matching import wait_for_image
 
 
 def filter_support():
@@ -320,7 +320,7 @@ def skip_check():
     
     for template_path, variant_name in skip_variants:
         if os.path.exists(template_path):
-            from utils_unity.recognizer import max_match_confidence
+            from utils.recognizer import max_match_confidence
             confidence = max_match_confidence(screenshot, template_path)
             if confidence and confidence > best_confidence:
                 best_confidence = confidence

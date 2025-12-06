@@ -3,8 +3,8 @@ import os
 import json
 from core_unity.skill_recognizer import take_screenshot, perform_swipe, recognize_skill_up_locations
 from core_unity.skill_purchase_optimizer import fuzzy_match_skill_name
-from utils_unity.device import run_adb
-from utils_unity.log import log_debug, log_info, log_warning, log_error
+from utils.device import run_adb
+from utils.log import log_debug, log_info, log_warning, log_error
 
 # Skill list swipe coordinates (optimized for skill screen)
 SKILL_LIST_CENTER_X = 504
@@ -96,7 +96,7 @@ def extract_skill_points(screenshot=None):
 
     try:
         if screenshot is None:
-            from utils_unity.screenshot import take_screenshot
+            from utils.screenshot import take_screenshot
             screenshot = take_screenshot()
         
         # Skill points region: 825, 605, 936, 656 (width: 111, height: 51)

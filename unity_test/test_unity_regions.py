@@ -1,5 +1,5 @@
 """
-Standalone region/detection test for Unity Cup using `utils_unity/constants_phone.py`.
+Standalone region/detection test for Unity Cup using `utils/constants_unity.py`.
 
 Run this while the Unity Cup scenario is open on the emulator:
 
@@ -23,10 +23,10 @@ from typing import Optional, List, Tuple
 
 from PIL import ImageDraw
 
-from utils_unity.log import log_info, log_warning, log_error, log_debug
-from utils_unity.screenshot import take_screenshot
-from utils_unity.recognizer import locate_on_screen, match_template
-from utils_unity.constants_phone import (
+from utils.log import log_info, log_warning, log_error, log_debug
+from utils.screenshot import take_screenshot
+from utils.recognizer import locate_on_screen, match_template
+from utils.constants_unity import (
     SUPPORT_CARD_ICON_REGION,
     MOOD_REGION,
     TURN_REGION,
@@ -170,7 +170,7 @@ def test_state_ocr(screenshot):
     log_info(f"Dating available: {dating}")
 
     # Print regions for manual verification
-    log_debug("\nRegions from utils_unity.constants_phone:")
+    log_debug("\nRegions from utils.constants_unity:")
     log_debug(f"  MOOD_REGION={MOOD_REGION}")
     log_debug(f"  YEAR_REGION={YEAR_REGION}")
     log_debug(f"  CRITERIA_REGION={CRITERIA_REGION}")
@@ -254,7 +254,7 @@ def save_debug_plot(
         img = screenshot.convert("RGB").copy()
         draw = ImageDraw.Draw(img)
 
-        # Region rectangles (constants from utils_unity.constants_phone)
+        # Region rectangles (constants from utils.constants_unity)
         regions = [
             ("MOOD", MOOD_REGION, "red"),
             ("YEAR", YEAR_REGION, "orange"),
@@ -371,7 +371,7 @@ def main():
     else:
         log_error(f"Unknown mode '{mode}'. Use buttons/state/failure or -h for help.")
 
-    log_info("\nDone. Use these results to adjust regions in `utils_unity/constants_phone.py`.")
+    log_info("\nDone. Use these results to adjust regions in `utils/constants_unity.py`.")
 
 
 if __name__ == "__main__":

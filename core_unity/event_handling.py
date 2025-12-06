@@ -18,11 +18,11 @@ if os.name == 'nt':  # Windows
     except:
         pass
 
-from utils_unity.recognizer import locate_all_on_screen
-from utils_unity.screenshot import take_screenshot, capture_region
+from utils.recognizer import locate_all_on_screen
+from utils.screenshot import take_screenshot, capture_region
 from core_unity.ocr import extract_event_name_text
-from utils_unity.log import log_debug, log_info, log_warning, log_error
-from utils_unity.template_matching import deduplicated_matches
+from utils.log import log_debug, log_info, log_warning, log_error
+from utils.template_matching import deduplicated_matches
 
 # Load config and check debug mode
 with open("config.json", "r", encoding="utf-8") as config_file:
@@ -418,7 +418,7 @@ def handle_event_choice():
         tuple: (choice_number, success, choice_locations) - choice number, success status, and found locations
     """
     # Define the region for event name detection
-    from utils_unity.constants_phone import EVENT_REGION
+    from utils.constants_unity import EVENT_REGION
     event_region = EVENT_REGION
     
     log_info(f"Event detected, scan event")
@@ -591,7 +591,7 @@ def click_event_choice(choice_number, choice_locations=None):
         bool: True if successful, False otherwise
     """
     try:
-        from utils_unity.input import tap
+        from utils.input import tap
         
         # Use pre-found locations if provided, otherwise search again
         if choice_locations is None:

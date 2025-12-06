@@ -17,9 +17,9 @@ This script will:
 
 import time
 
-from utils_unity.log import log_info, log_warning, log_error, log_debug
-from utils_unity.recognizer import locate_on_screen
-from utils_unity.screenshot import take_screenshot
+from utils.log import log_info, log_warning, log_error, log_debug
+from utils.recognizer import locate_on_screen
+from utils.screenshot import take_screenshot
 
 from core_unity.unity_race_handling import unity_race_workflow
 
