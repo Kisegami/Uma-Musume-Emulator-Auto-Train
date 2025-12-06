@@ -1,43 +1,4 @@
 {
-  "priority_stat": [
-    "spd",
-    "sta",
-    "wit",
-    "pwr",
-    "guts"
-  ],
-  "minimum_mood": "GREAT",
-  "maximum_failure": 15,
-  "allowed_grades": [
-    "G1",
-    "G2"
-  ],
-  "allowed_tracks": [
-    "Turf"
-  ],
-  "allowed_distances": [
-    "Medium",
-    "Long"
-  ],
-  "strategy": "FRONT",
-  "retry_race": true,
-  "do_custom_race": true,
-  "custom_race_file": "custom_races.json",
-  "skill_point_cap": 400,
-  "skill_purchase": "auto",
-  "skill_file": "skills_example.json",
-  "enable_skill_point_check": true,
-  "min_energy": 30,
-  "min_score": 1.0,
-  "min_wit_score": 1.0,
-  "do_race_when_bad_training": false,
-  "stat_caps": {
-    "spd": 1100,
-    "sta": 850,
-    "pwr": 600,
-    "guts": 600,
-    "wit": 600
-  },
   "capture_method": "nemu_ipc",
   "adb_config": {
     "device_address": "127.0.0.1:16448",
@@ -51,6 +12,56 @@
     "instance_id": 2,
     "display_id": 0,
     "timeout": 1.0
+  },
+  "ldopengl_config": {
+    "ld_folder": "J:\\LDPlayer\\LDPlayer9",
+    "instance_id": 0,
+    "orientation": 0
+  },
+  "training": {
+    "priority_stat": [
+      "spd",
+      "sta",
+      "wit",
+      "pwr",
+      "guts"
+    ],
+    "minimum_mood": "GREAT",
+    "maximum_failure": 15,
+    "min_energy": 30,
+    "min_score": 1.0,
+    "min_wit_score": 1.0,
+    "do_race_when_bad_training": false,
+    "stat_caps": {
+      "spd": 1100,
+      "sta": 850,
+      "pwr": 600,
+      "guts": 600,
+      "wit": 600
+    }
+  },
+  "racing": {
+    "strategy": "FRONT",
+    "retry_race": true,
+    "allowed_grades": [
+      "G1",
+      "G2"
+    ],
+    "allowed_tracks": [
+      "Turf"
+    ],
+    "allowed_distances": [
+      "Medium",
+      "Long"
+    ],
+    "do_custom_race": true,
+    "custom_race_file": "custom_races.json"
+  },
+  "skills": {
+    "skill_point_cap": 400,
+    "skill_purchase": "auto",
+    "skill_file": "skills_example.json",
+    "enable_skill_point_check": true
   },
   "restart_career": {
     "restart_enabled": true,

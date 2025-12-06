@@ -3,10 +3,13 @@ import json
 import ctypes
 import time
 import statistics
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from dataclasses import dataclass
 from typing import Optional, Union
 from PIL import Image, ImageEnhance
 import numpy as np
+import cv2
 from utils.device import run_adb
 from utils.log import log_debug, log_info, log_warning, log_error
 
@@ -18,6 +21,16 @@ class NemuIpcIncompatible(Exception):
 
 class NemuIpcError(Exception):
     """Raised when Nemu IPC operations fail"""
+    pass
+
+
+class LDOpenGLIncompatible(Exception):
+    """Raised when LDOpenGL is not available or compatible"""
+    pass
+
+
+class LDOpenGLError(Exception):
+    """Raised when LDOpenGL operations fail"""
     pass
 
 
@@ -167,6 +180,193 @@ class NemuIpcCapture:
         return arr
 
 
+def bytes_to_str(b: bytes) -> str:
+    """Convert bytes to string, trying multiple encodings."""
+    for encoding in ['utf-8', 'gbk']:
+        try:
+            return b.decode(encoding)
+        except UnicodeDecodeError:
+            pass
+    return str(b)
+
+
+@dataclass
+class DataLDPlayerInfo:
+    """LDPlayer instance information."""
+    index: int
+    name: str
+    topWnd: int
+    bndWnd: int
+    sysboot: int
+    playerpid: int
+    vboxpid: int
+    width: int
+    height: int
+    dpi: int
+
+    def __post_init__(self):
+        self.index = int(self.index)
+        self.name = bytes_to_str(self.name)
+        self.topWnd = int(self.topWnd)
+        self.bndWnd = int(self.bndWnd)
+        self.sysboot = int(self.sysboot)
+        self.playerpid = int(self.playerpid)
+        self.vboxpid = int(self.vboxpid)
+        self.width = int(self.width)
+        self.height = int(self.height)
+        self.dpi = int(self.dpi)
+
+
+class LDConsole:
+    """Wrapper for ldconsole.exe commands."""
+    
+    def __init__(self, ld_folder: str):
+        self.ld_console = os.path.abspath(os.path.join(ld_folder, './ldconsole.exe'))
+        if not os.path.exists(self.ld_console):
+            raise LDOpenGLIncompatible(f'ldconsole.exe not found: {self.ld_console}')
+
+    def subprocess_run(self, cmd, timeout=10):
+        cmd = [self.ld_console] + cmd
+        try:
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=False)
+            stdout, _ = process.communicate(timeout=timeout)
+            return stdout
+        except FileNotFoundError as e:
+            raise LDOpenGLIncompatible(f'Cannot execute {cmd}: {e}')
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return b''
+
+    def list2(self):
+        """List all LDPlayer instances."""
+        out = []
+        data = self.subprocess_run(['list2'])
+        for row in data.strip().split(b'\n'):
+            row = row.strip()
+            if not row:
+                continue
+            parts = row.split(b',')
+            if len(parts) == 10:
+                try:
+                    out.append(DataLDPlayerInfo(*parts))
+                except Exception:
+                    pass
+        return out
+
+
+class IScreenShotClass:
+    """Wrapper for IScreenShotClass from ldopengl64.dll."""
+    
+    def __init__(self, ptr):
+        self.ptr = ptr
+        cap_type = ctypes.WINFUNCTYPE(ctypes.c_void_p)
+        release_type = ctypes.WINFUNCTYPE(None)
+        self.class_cap = cap_type(1, "IScreenShotClass_Cap")
+        self.class_release = release_type(2, "IScreenShotClass_Release")
+
+    def cap(self):
+        return self.class_cap(self.ptr)
+
+    def __del__(self):
+        if hasattr(self, 'class_release'):
+            self.class_release(self.ptr)
+
+
+class LDOpenGLCapture:
+    """LDOpenGL capture implementation for faster screenshots on LDPlayer."""
+    
+    def __init__(self, ld_folder: str, instance_id: int, orientation: int = 0):
+        """
+        Args:
+            ld_folder: Installation path of LDPlayer
+            instance_id: Emulator instance ID, starting from 0
+            orientation: Device orientation (0=normal, 2=upside down)
+        """
+        self.ld_folder = ld_folder
+        self.instance_id = instance_id
+        self.orientation = orientation
+        self.width = 0
+        self.height = 0
+        
+        ldopengl_dll = os.path.abspath(os.path.join(ld_folder, './ldopengl64.dll'))
+        
+        try:
+            self.lib = ctypes.WinDLL(ldopengl_dll)
+        except OSError as e:
+            if not os.path.exists(ldopengl_dll):
+                raise LDOpenGLIncompatible(
+                    f'ldopengl64.dll not found. Requires LDPlayer >= 9.0.78'
+                )
+            raise LDOpenGLIncompatible(f'Cannot load DLL: {e}')
+        
+        self.console = LDConsole(ld_folder)
+        self.info = self.get_player_info_by_index(instance_id)
+        self.width = self.info.width
+        self.height = self.info.height
+        
+        self.lib.CreateScreenShotInstance.restype = ctypes.c_void_p
+        instance_ptr = ctypes.c_void_p(
+            self.lib.CreateScreenShotInstance(instance_id, self.info.playerpid)
+        )
+        self.screenshot_instance = IScreenShotClass(instance_ptr)
+
+    def get_player_info_by_index(self, instance_id: int):
+        """Get LDPlayer instance info by index."""
+        for info in self.console.list2():
+            if info.index == instance_id:
+                if not info.sysboot:
+                    raise LDOpenGLError(f'Instance {instance_id} is not running')
+                return info
+        raise LDOpenGLError(f'No instance with index {instance_id}')
+
+    @staticmethod
+    def serial_to_id(serial: str) -> Optional[int]:
+        """Predict instance ID from ADB serial."""
+        try:
+            if ':' in serial:
+                port = int(serial.split(':')[1])
+                if 5555 <= port <= 5555 + 32:
+                    return (port - 5555) // 2
+            elif serial.startswith('emulator-'):
+                port = int(serial.replace('emulator-', ''))
+                if 5554 <= port <= 5554 + 32:
+                    return (port - 5554) // 2
+        except (ValueError, IndexError):
+            pass
+        return None
+
+    def screenshot(self) -> Image.Image:
+        """Take screenshot using LDOpenGL."""
+        img_ptr = self.screenshot_instance.cap()
+        if img_ptr is None:
+            raise LDOpenGLError('Empty image pointer')
+        
+        width, height = self.info.width, self.info.height
+        img = ctypes.cast(
+            img_ptr, 
+            ctypes.POINTER(ctypes.c_ubyte * (height * width * 3))
+        ).contents
+        image = np.ctypeslib.as_array(img).reshape((height, width, 3))
+        
+        # Process: flip and convert BGR to RGB
+        if self.orientation == 2:
+            image = cv2.flip(image, 1)  # Horizontal flip
+        else:
+            image = cv2.flip(image, 0)  # Vertical flip (raw data is upside down)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Convert to RGBA for PIL
+        rgba = np.zeros((height, width, 4), dtype=np.uint8)
+        rgba[:, :, :3] = image
+        rgba[:, :, 3] = 255  # Alpha channel
+        
+        return Image.fromarray(rgba, 'RGBA')
+
+    def get_resolution(self):
+        """Get screen resolution."""
+        return self.width, self.height
+
+
 class AdbCapture:
     """ADB capture implementation (existing functionality)"""
 
@@ -196,12 +396,13 @@ class AdbCapture:
 
 
 class UnifiedScreenshot:
-    """Unified screenshot system that can use either ADB or Nemu IPC"""
+    """Unified screenshot system that can use ADB, Nemu IPC, or LDOpenGL"""
 
     def __init__(self):
         self.config = self._load_config()
         self.capture_method = self.config.get('capture_method', 'adb')
         self.nemu_capture = None
+        self.ldopengl_capture = None
         self.adb_capture = None
 
         # Initialize capture method
@@ -215,7 +416,6 @@ class UnifiedScreenshot:
                     timeout=nemu_config.get('timeout', 1.0),
                     verbose=False
                 )
-                # Only print once during initialization, not every screenshot
                 if not hasattr(self, '_nemu_initialized'):
                     log_info(f"Initialized Nemu IPC capture with method: {self.capture_method}")
                     log_info("Note: DLL connection messages may appear in console (won't affect GUI)")
@@ -225,9 +425,54 @@ class UnifiedScreenshot:
                 log_info("Falling back to ADB capture")
                 self.capture_method = 'adb'
 
+        elif self.capture_method == 'ldopengl':
+            if os.name != 'nt':
+                log_warning("LDOpenGL only works on Windows, falling back to ADB")
+                self.capture_method = 'adb'
+            else:
+                try:
+                    ldopengl_config = self.config.get('ldopengl_config', {})
+                    ld_folder = ldopengl_config.get('ld_folder', '')
+                    instance_id = ldopengl_config.get('instance_id', 0)
+                    orientation = ldopengl_config.get('orientation', 0)
+                    
+                    # Use device_address from adb_config for auto-detection
+                    adb_config = self.config.get('adb_config', {})
+                    device_address = adb_config.get('device_address', '')
+                    
+                    # Try to auto-detect instance_id from device_address if not provided
+                    if instance_id == 0 and device_address:
+                        auto_id = LDOpenGLCapture.serial_to_id(device_address)
+                        if auto_id is not None:
+                            instance_id = auto_id
+                            log_info(f"Auto-detected LDPlayer instance ID {instance_id} from device_address")
+                    
+                    if not ld_folder:
+                        raise LDOpenGLIncompatible("ld_folder not configured in ldopengl_config")
+                    
+                    self.ldopengl_capture = LDOpenGLCapture(
+                        ld_folder=ld_folder,
+                        instance_id=instance_id,
+                        orientation=orientation
+                    )
+                    if not hasattr(self, '_ldopengl_initialized'):
+                        log_info(f"Initialized LDOpenGL capture: {self.ldopengl_capture.info.name} "
+                                f"({self.ldopengl_capture.width}x{self.ldopengl_capture.height})")
+                        self._ldopengl_initialized = True
+                except (LDOpenGLIncompatible, LDOpenGLError) as e:
+                    log_error(f"Failed to initialize LDOpenGL capture: {e}")
+                    log_info("Falling back to ADB capture")
+                    self.capture_method = 'adb'
+                except Exception as e:
+                    log_error(f"Unexpected error initializing LDOpenGL: {e}")
+                    log_info("Falling back to ADB capture")
+                    self.capture_method = 'adb'
+
         if self.capture_method == 'adb':
             self.adb_capture = AdbCapture(self.config.get('adb_config', {}))
-            log_info(f"Using ADB capture method: {self.capture_method}")
+            if not hasattr(self, '_adb_initialized'):
+                log_info(f"Using ADB capture method: {self.capture_method}")
+                self._adb_initialized = True
 
     def _load_config(self) -> dict:
         """Load configuration from config.json"""
@@ -242,19 +487,24 @@ class UnifiedScreenshot:
         """Take screenshot using the configured capture method"""
         if self.capture_method == 'nemu_ipc' and self.nemu_capture:
             try:
-                # Use Nemu IPC capture
                 with self.nemu_capture:
-                    # Nemu IPC returns RGBA directly - NO conversion needed!
                     rgba_array = self.nemu_capture.screenshot()
-                    
-                    # Only flip vertically, no color conversion
                     flipped_array = np.flip(rgba_array, axis=0)
-                    
-                    # Convert to PIL Image
-                    img = Image.fromarray(flipped_array, 'RGBA')
-                    return img
+                    return Image.fromarray(flipped_array, 'RGBA')
             except Exception as e:
                 log_error(f"Nemu IPC capture failed: {e}")
+                log_info("Falling back to ADB capture")
+                self.capture_method = 'adb'
+
+        elif self.capture_method == 'ldopengl' and self.ldopengl_capture:
+            try:
+                return self.ldopengl_capture.screenshot()
+            except (LDOpenGLError, LDOpenGLIncompatible) as e:
+                log_error(f"LDOpenGL capture failed: {e}")
+                log_info("Falling back to ADB capture")
+                self.capture_method = 'adb'
+            except Exception as e:
+                log_error(f"Unexpected LDOpenGL error: {e}")
                 log_info("Falling back to ADB capture")
                 self.capture_method = 'adb'
 
@@ -262,7 +512,6 @@ class UnifiedScreenshot:
         if self.adb_capture:
             return self.adb_capture.screenshot()
         else:
-            # Initialize ADB capture if not already done
             self.adb_capture = AdbCapture(self.config.get('adb_config', {}))
             return self.adb_capture.screenshot()
 
@@ -273,6 +522,8 @@ class UnifiedScreenshot:
                 with self.nemu_capture:
                     self.nemu_capture.get_resolution()
                     return self.nemu_capture.width, self.nemu_capture.height
+            elif self.capture_method == 'ldopengl' and self.ldopengl_capture:
+                return self.ldopengl_capture.get_resolution()
             else:
                 # Fallback to ADB method
                 result = run_adb(['shell', 'wm', 'size'])
@@ -290,7 +541,6 @@ class UnifiedScreenshot:
                     return screenshot.size
         except Exception as e:
             log_error(f"Error getting screen size: {e}")
-            # Default fallback size
             return 1080, 1920
 
     def enhanced_screenshot(self, region, screenshot=None):

@@ -198,6 +198,11 @@ class MainWindow:
                 "display_id": 0,
                 "timeout": 1.0
             },
+            "ldopengl_config": {
+                "ld_folder": "J:\\LDPlayer\\LDPlayer9",
+                "instance_id": 0,
+                "orientation": 0
+            },
             "debug_mode": False
         }
     
