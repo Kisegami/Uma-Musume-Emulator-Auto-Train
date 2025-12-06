@@ -86,7 +86,8 @@ class TrainingTab(BaseTab):
         self.priority_container.pack(fill=tk.X, padx=15, pady=(0, 15))
         
         # Create draggable stat boxes for the 5 fixed stats
-        priority_stats = config.get('priority_stat', ['spd', 'sta', 'wit', 'pwr', 'guts'])
+        training_config = config.get('training', {})
+        priority_stats = training_config.get('priority_stat', ['spd', 'sta', 'wit', 'pwr', 'guts'])
         
         # Ensure we have exactly 5 stats
         while len(priority_stats) < 5:
@@ -108,7 +109,8 @@ class TrainingTab(BaseTab):
         mood_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
         mood_frame.pack(fill=tk.X, padx=15, pady=5)
         ctk.CTkLabel(mood_frame, text="Minimum Mood:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.minimum_mood_var = tk.StringVar(value=config.get('minimum_mood', 'GREAT'))
+        training_config = config.get('training', {})
+        self.minimum_mood_var = tk.StringVar(value=training_config.get('minimum_mood', 'GREAT'))
         self.minimum_mood_var.trace('w', self.on_training_setting_change)
         mood_combo = ctk.CTkOptionMenu(mood_frame, values=['GREAT', 'GOOD', 'NORMAL', 'BAD', 'AWFUL'], 
                                        variable=self.minimum_mood_var, fg_color=self.colors['accent_blue'], 
@@ -121,7 +123,7 @@ class TrainingTab(BaseTab):
         fail_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
         fail_frame.pack(fill=tk.X, padx=15, pady=5)
         ctk.CTkLabel(fail_frame, text="Maximum Failure Rate:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.maximum_failure_var = tk.IntVar(value=config.get('maximum_failure', 15))
+        self.maximum_failure_var = tk.IntVar(value=training_config.get('maximum_failure', 15))
         self.maximum_failure_var.trace('w', self.on_training_setting_change)
         ctk.CTkEntry(fail_frame, textvariable=self.maximum_failure_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
         
@@ -129,14 +131,14 @@ class TrainingTab(BaseTab):
         energy_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
         energy_frame.pack(fill=tk.X, padx=15, pady=5)
         ctk.CTkLabel(energy_frame, text="Minimum Energy for Training:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.min_energy_var = tk.IntVar(value=config.get('min_energy', 30))
+        self.min_energy_var = tk.IntVar(value=training_config.get('min_energy', 30))
         self.min_energy_var.trace('w', self.on_training_setting_change)
         ctk.CTkEntry(energy_frame, textvariable=self.min_energy_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
         
         # Do Race if no good training found
         race_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
         race_frame.pack(fill=tk.X, padx=15, pady=5)
-        self.do_race_var = tk.BooleanVar(value=config.get('do_race_when_bad_training', True))
+        self.do_race_var = tk.BooleanVar(value=training_config.get('do_race_when_bad_training', False))
         self.do_race_var.trace('w', self.on_training_setting_change)
         race_checkbox = ctk.CTkCheckBox(race_frame, text="Do Race if no good training found", 
                                       variable=self.do_race_var, text_color=self.colors['text_light'],
@@ -152,7 +154,7 @@ class TrainingTab(BaseTab):
         score_frame = ctk.CTkFrame(self.race_settings_frame, fg_color="transparent")
         score_frame.pack(fill=tk.X, pady=5)
         ctk.CTkLabel(score_frame, text="Minimum Training Score:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.min_score_var = tk.DoubleVar(value=config.get('min_score', 1.0))
+        self.min_score_var = tk.DoubleVar(value=training_config.get('min_score', 1.0))
         self.min_score_var.trace('w', self.on_training_setting_change)
         ctk.CTkEntry(score_frame, textvariable=self.min_score_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
         
@@ -160,7 +162,7 @@ class TrainingTab(BaseTab):
         wit_score_frame = ctk.CTkFrame(self.race_settings_frame, fg_color="transparent")
         wit_score_frame.pack(fill=tk.X, pady=5)
         ctk.CTkLabel(wit_score_frame, text="Minimum WIT Training Score:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.min_wit_score_var = tk.DoubleVar(value=config.get('min_wit_score', 1.0))
+        self.min_wit_score_var = tk.DoubleVar(value=training_config.get('min_wit_score', 1.0))
         self.min_wit_score_var.trace('w', self.on_training_setting_change)
         ctk.CTkEntry(wit_score_frame, textvariable=self.min_wit_score_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
     
@@ -175,7 +177,8 @@ class TrainingTab(BaseTab):
         caps_container = ctk.CTkFrame(caps_frame, fg_color="transparent")
         caps_container.pack(fill=tk.X, padx=15, pady=(0, 15))
         
-        stat_caps = config.get('stat_caps', {})
+        training_config = config.get('training', {})
+        stat_caps = training_config.get('stat_caps', {})
         stats = ['spd', 'sta', 'pwr', 'guts', 'wit']
         
         # Create horizontal stat cap inputs
@@ -385,23 +388,29 @@ class TrainingTab(BaseTab):
         try:
             config = self.main_window.get_config()
             
+            # Ensure training section exists
+            if 'training' not in config:
+                config['training'] = {}
+            
             # Update priority stats (in current order)
-            config['priority_stat'] = [var.get() for var in self.priority_vars]
+            config['training']['priority_stat'] = [box_data['stat'] for box_data in self.stat_boxes]
             
             # Update training settings
-            config['minimum_mood'] = self.minimum_mood_var.get()
-            config['maximum_failure'] = self.maximum_failure_var.get()
-            config['min_energy'] = self.min_energy_var.get()
-            config['do_race_when_bad_training'] = self.do_race_var.get()
+            config['training']['minimum_mood'] = self.minimum_mood_var.get()
+            config['training']['maximum_failure'] = self.maximum_failure_var.get()
+            config['training']['min_energy'] = self.min_energy_var.get()
+            config['training']['do_race_when_bad_training'] = self.do_race_var.get()
             
             # Update race-related settings
             if self.do_race_var.get():
-                config['min_score'] = self.min_score_var.get()
-                config['min_wit_score'] = self.min_wit_score_var.get()
+                config['training']['min_score'] = self.min_score_var.get()
+                config['training']['min_wit_score'] = self.min_wit_score_var.get()
             
             # Update stat caps
+            if 'stat_caps' not in config['training']:
+                config['training']['stat_caps'] = {}
             for stat, var in self.stat_cap_vars.items():
-                config['stat_caps'][stat] = var.get()
+                config['training']['stat_caps'][stat] = var.get()
             
             # Save training score config
             self.save_training_score_config()
@@ -488,23 +497,29 @@ class TrainingTab(BaseTab):
     
     def update_config(self, config):
         """Update the config dictionary with current values"""
+        # Ensure training section exists
+        if 'training' not in config:
+            config['training'] = {}
+        
         # Update priority stats (in current order)
-        config['priority_stat'] = [box_data['stat'] for box_data in self.stat_boxes]
+        config['training']['priority_stat'] = [box_data['stat'] for box_data in self.stat_boxes]
         
         # Update training settings
-        config['minimum_mood'] = self.minimum_mood_var.get()
-        config['maximum_failure'] = self.maximum_failure_var.get()
-        config['min_energy'] = self.min_energy_var.get()
-        config['do_race_when_bad_training'] = self.do_race_var.get()
+        config['training']['minimum_mood'] = self.minimum_mood_var.get()
+        config['training']['maximum_failure'] = self.maximum_failure_var.get()
+        config['training']['min_energy'] = self.min_energy_var.get()
+        config['training']['do_race_when_bad_training'] = self.do_race_var.get()
         
         # Update race-related settings
         if self.do_race_var.get():
-            config['min_score'] = self.min_score_var.get()
-            config['min_wit_score'] = self.min_wit_score_var.get()
+            config['training']['min_score'] = self.min_score_var.get()
+            config['training']['min_wit_score'] = self.min_wit_score_var.get()
         
         # Update stat caps
+        if 'stat_caps' not in config['training']:
+            config['training']['stat_caps'] = {}
         for stat, var in self.stat_cap_vars.items():
-            config['stat_caps'][stat] = var.get()
+            config['training']['stat_caps'][stat] = var.get()
     
     def on_training_setting_change(self, *args):
         """Called when any training setting variable changes - auto-save"""

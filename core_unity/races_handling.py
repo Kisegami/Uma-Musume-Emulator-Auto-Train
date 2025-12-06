@@ -17,7 +17,8 @@ from core_unity.ocr import extract_text
 try:
     with open("config.json", "r", encoding="utf-8") as config_file:
         config = json.load(config_file)
-        RETRY_RACE = config.get("retry_race", True)
+        racing_config = config.get("racing", {})
+        RETRY_RACE = racing_config.get("retry_race", True)
 except Exception:
     RETRY_RACE = True
 
@@ -156,7 +157,8 @@ def race_day():
     with open("config.json", "r", encoding="utf-8") as file:
         config = json.load(file)
     
-    enable_skill_check = config.get("enable_skill_point_check", True)
+    skills_config = config.get("skills", {})
+    enable_skill_check = skills_config.get("enable_skill_point_check", True)
     
     if enable_skill_check:
         log_info(f"Race Day - Checking skill points cap...")
@@ -297,7 +299,8 @@ def check_strategy_before_race(region=(660, 974, 378, 120)) -> bool:
         try:
             with open("config.json", "r", encoding="utf-8") as f:
                 config = json.load(f)
-            expected_strategy = config.get("strategy", "").upper()
+            racing_config = config.get("racing", {})
+            expected_strategy = racing_config.get("strategy", "").upper()
         except Exception:
             log_debug(f"Cannot read config.json")
             return False
@@ -561,14 +564,15 @@ def find_and_do_race():
         goal_name = check_goal_name()
         
         # Override allowed grades if goal contains G1
+        racing_config_section = config.get("racing", {})
         if goal_name and "G1" in goal_name:
             log_debug(f"Goal contains G1: '{goal_name}' - Overriding to only allow G1 races")
             allowed_grades = ["G1"]
         else:
-            allowed_grades = config.get("allowed_grades", ["G1", "G2", "G3", "OP", "PRE-OP"])
+            allowed_grades = racing_config_section.get("allowed_grades", ["G1", "G2", "G3", "OP", "PRE-OP"])
         
-        allowed_tracks = config.get("allowed_tracks", ["Turf", "Dirt"])
-        allowed_distances = config.get("allowed_distances", ["Sprint", "Mile", "Medium", "Long"])
+        allowed_tracks = racing_config_section.get("allowed_tracks", ["Turf", "Dirt"])
+        allowed_distances = racing_config_section.get("allowed_distances", ["Sprint", "Mile", "Medium", "Long"])
         
         # Find best race using the existing logic
         best_race = None

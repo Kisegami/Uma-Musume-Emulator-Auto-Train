@@ -24,7 +24,7 @@ from utils.constants_unity import (
 )
 
 # Import ADB state and logic modules
-from core_unity.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar
+from core_unity.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar, check_dating_available
 
 # Import event handling functions
 from core_unity.event_handling import count_event_choices, load_event_priorities, analyze_event_options, handle_event_choice, click_event_choice
@@ -47,7 +47,8 @@ from core_unity.races_handling import (
 with open("config.json", "r", encoding="utf-8") as config_file:
     config = json.load(config_file)
     DEBUG_MODE = config.get("debug_mode", False)
-    RETRY_RACE = config.get("retry_race", True)
+    racing_config = config.get("racing", {})
+    RETRY_RACE = racing_config.get("retry_race", True)
 
 from utils.log import log_debug, log_info, log_warning, log_error, log_success
 from utils.template_matching import deduplicated_matches, wait_for_image
@@ -180,11 +181,36 @@ def do_recreation():
         log_debug(f"Clicked summer recreation button")
     else:
         log_debug(f"No recreation button found")
+        return
+    
+    # Wait 2 seconds for screen to load
+    time.sleep(2.0)
+    
+    # Check for normal recreation screen (cancel button)
+    log_debug(f"Checking for normal recreation screen (cancel button)...")
+    screenshot = take_screenshot()
+    cancel_matches = match_template(screenshot, "assets/buttons/cancel_btn.png", confidence=0.8)
+    
+    if cancel_matches:
+        # Normal recreation screen detected, tap trainee_date.png
+        log_debug(f"Normal recreation screen detected, selecting trainee date...")
+        log_info(f"Normal recreation screen detected, selecting trainee date...")
+        
+        trainee_date_btn = locate_on_screen("assets/ui/trainee_date.png", confidence=0.8)
+        if trainee_date_btn:
+            log_debug(f"Found trainee date button at {trainee_date_btn}")
+            tap(trainee_date_btn[0], trainee_date_btn[1])
+            log_info(f"Selected trainee date")
+        else:
+            log_warning(f"Trainee date button not found after detecting cancel button")
+    else:
+        log_debug(f"No cancel button found - normal recreation flow")
 
 def career_lobby():
     """Main career lobby loop"""
     # Use existing config loaded at module level
-    MINIMUM_MOOD = config.get("minimum_mood", "GREAT")
+    training_config_section = config.get("training", {})
+    MINIMUM_MOOD = training_config_section.get("minimum_mood", "GREAT")
     # Track last day we attempted a custom race but failed, to avoid re-checking within same day
     last_failed_custom_race_day = None
 
@@ -383,7 +409,8 @@ def career_lobby():
         # Check energy bar before proceeding with training decisions
         log_debug(f"Checking energy bar...")
         energy_percentage = check_energy_bar(screenshot)
-        min_energy = config.get("min_energy", 30)
+        training_config_section = config.get("training", {})
+        min_energy = training_config_section.get("min_energy", 30)
         
         log_info(f"Energy: {energy_percentage:.1f}% (Minimum: {min_energy}%)")
         
@@ -395,6 +422,10 @@ def career_lobby():
             log_info(f"Current stats: {stats_str}")
         except Exception as e:
             log_debug(f"Could not get current stats: {e}")
+        
+        # Check and display dating availability
+        dating_available = check_dating_available(screenshot)
+        log_info(f"Dating Available: {dating_available}")
         
         # Check if goals criteria are NOT met AND it is not Pre-Debut AND turn is less than 10
         # Prioritize racing when criteria are not met to help achieve goals
@@ -414,7 +445,7 @@ def career_lobby():
                 time.sleep(0.5)
         else:
             log_info(f"Decision: Criteria met or conditions not suitable for racing")
-            log_debug(f"Racing not prioritized - Criteria met: {goal_analysis['criteria_met']}, Pre-debut: {goal_analysis['is_pre_debut']}, Turn < 10: {goal_analysis['turn_less_than_10']}")
+            log_debug(f"Racing not prioritized - Criteria met: {goal_analysis['criteria_met']}, Pre-debut: {goal_analysis['is_pre_debut']}")
         
         log_info(f"")
 
@@ -424,7 +455,8 @@ def career_lobby():
             log_info(f"URA Finale")
             
             # Check skill points cap before URA race day (if enabled)
-            enable_skill_check = config.get("enable_skill_point_check", True)
+            skills_config = config.get("skills", {})
+            enable_skill_check = skills_config.get("enable_skill_point_check", True)
             
             if enable_skill_check:
                 log_info(f"URA Finale Race Day - Checking skill points cap...")
@@ -462,7 +494,8 @@ def career_lobby():
 
         # Check for custom race (bypasses all criteria) - only if enabled in config
         log_debug(f"Checking if custom race is enabled...")
-        do_custom_race_enabled = config.get("do_custom_race", False)
+        racing_config_section = config.get("racing", {})
+        do_custom_race_enabled = racing_config_section.get("do_custom_race", False)
         
         if do_custom_race_enabled:
             # Build day key using current year and turn to avoid repeat checks in the same day
@@ -535,15 +568,16 @@ def career_lobby():
         log_debug(f"Deciding best training action using scoring algorithm...")
         
         # Use existing config for scoring thresholds
+        training_config_section = config.get("training", {})
         training_config = {
-            "maximum_failure": config.get("maximum_failure", 15),
-            "min_score": config.get("min_score", 1.0),
-            "min_wit_score": config.get("min_wit_score", 1.0),
-            "priority_stat": config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
+            "maximum_failure": training_config_section.get("maximum_failure", 15),
+            "min_score": training_config_section.get("min_score", 1.0),
+            "min_wit_score": training_config_section.get("min_wit_score", 1.0),
+            "priority_stat": training_config_section.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
         }
 
         # If race fallback is disabled, ignore min_score entirely from the start
-        do_race_when_bad_training_flag = config.get("do_race_when_bad_training", True)
+        do_race_when_bad_training_flag = training_config_section.get("do_race_when_bad_training", True)
         if not do_race_when_bad_training_flag:
             training_config["min_score"] = 0.0
         
@@ -724,20 +758,14 @@ def check_goal_criteria(criteria_data, year, turn):
     # Check if it's pre-debut year
     is_pre_debut = is_pre_debut_year(year)
     
-    # Check if turn is a number before comparing
-    turn_is_number = isinstance(turn, int) or (isinstance(turn, str) and turn.isdigit())
-    turn_less_than_10 = turn < 10 if turn_is_number else False
+    # Determine if racing should be prioritized (when criteria not met, not pre-debut)
+    should_prioritize_racing = not criteria_met and not is_pre_debut
     
-    # Determine if racing should be prioritized (when criteria not met, not pre-debut, turn < 10)
-    should_prioritize_racing = not criteria_met and not is_pre_debut 
-    # and turn_less_than_10 (Temporarily disabled)
-    
-    log_debug(f"Year: '{year}', Criteria met: {criteria_met}, Pre-debut: {is_pre_debut}, Turn < 10: {turn_less_than_10}")
+    log_debug(f"Year: '{year}', Criteria met: {criteria_met}, Pre-debut: {is_pre_debut}")
     
     return {
         "criteria_met": criteria_met,
         "is_pre_debut": is_pre_debut,
-        "turn_less_than_10": turn_less_than_10,
         "should_prioritize_racing": should_prioritize_racing
     } 
 

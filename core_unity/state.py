@@ -330,7 +330,8 @@ def check_skill_points_cap(screenshot=None):
         log_error(f"Error loading config: {e}")
         return True
     
-    skill_point_cap = config.get("skill_point_cap", 9999)
+    skills_config = config.get("skills", {})
+    skill_point_cap = skills_config.get("skill_point_cap", 9999)
     current_skill_points = check_skill_points(screenshot)
     
     log_info(f"Current skill points: {current_skill_points}, Cap: {skill_point_cap}")
@@ -339,7 +340,7 @@ def check_skill_points_cap(screenshot=None):
         log_warning(f"Skill points ({current_skill_points}) exceed cap ({skill_point_cap})")
         
         # Decide flow based on config
-        skill_purchase_mode = config.get("skill_purchase", "manual").lower()
+        skill_purchase_mode = skills_config.get("skill_purchase", "manual").lower()
         if skill_purchase_mode == "auto":
             log_info(f"Auto skill purchase enabled - starting automation")
             try:
@@ -370,7 +371,7 @@ def check_skill_points_cap(screenshot=None):
                 log_info(f"Detected available skill points: {available_points}")
 
                 # Build purchase plan from config priorities
-                skill_file = config.get("skill_file", "skills.json")
+                skill_file = skills_config.get("skill_file", "skills.json")
                 log_info(f"Loading skills from: {skill_file}")
                 cfg = load_skill_config(skill_file)
                 purchase_plan = create_purchase_plan(all_skills, cfg, end_career=False)

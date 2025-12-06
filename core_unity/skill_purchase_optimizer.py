@@ -57,7 +57,8 @@ def load_skill_config(config_path=None):
         try:
             with open("config.json", 'r', encoding='utf-8') as f:
                 main_config = json.load(f)
-                config_path = main_config.get("skill_file", "skills.json")
+                skills_config = main_config.get("skills", {})
+                config_path = skills_config.get("skill_file", "skills.json")
                 log_debug(f"Loading skills from config file: {config_path}")
         except Exception as e:
             log_debug(f"Could not read config.json, using default skills.json: {e}")

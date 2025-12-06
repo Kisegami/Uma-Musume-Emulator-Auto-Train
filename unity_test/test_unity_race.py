@@ -5,6 +5,10 @@ Run from project root:
 
     python -m unity_test.test_unity_race
 
+Or run directly:
+
+    python unity_test/test_unity_race.py
+
 Make sure:
 - You are in the lobby where the Unity Cup button is visible.
 - The screen is stable (no popups blocking buttons).
@@ -15,7 +19,14 @@ This script will:
 - Report success/failure and how long it took.
 """
 
+import os
+import sys
 import time
+
+# Add project root to Python path so imports work when running directly
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from utils.log import log_info, log_warning, log_error, log_debug
 from utils.recognizer import locate_on_screen

@@ -86,13 +86,30 @@ def unity_race_workflow():
         log_warning("[UnityRace] unity_race.png not found/clicked; aborting workflow.")
         return False
 
-    # Step 1: Opponent selection or Zenith Race (single screenshot reused)
-    time.sleep(2)
-    screenshot = take_screenshot()
-    select_matches = match_template(screenshot, "assets/unity/slsect_opponent.png", confidence=0.8)
-    select_opponent = select_matches[0] if select_matches else None
-    zenith_matches = match_template(screenshot, "assets/unity/zenith_race_btn.png", confidence=0.8)
-    zenith_btn = zenith_matches[0] if zenith_matches else None
+    # Step 1: Opponent selection or Zenith Race (polling with screenshot interval)
+    log_info("[UnityRace] Waiting for Select Opponent or Zenith Race button...")
+    timeout = 20.0
+    check_interval = 0.5
+    start_time = time.time()
+    select_opponent = None
+    zenith_btn = None
+    screenshot = None
+    
+    while time.time() - start_time < timeout:
+        screenshot = take_screenshot()
+        select_matches = match_template(screenshot, "assets/unity/select_opponent.png", confidence=0.8)
+        select_opponent = select_matches[0] if select_matches else None
+        zenith_matches = match_template(screenshot, "assets/unity/zenith_race_btn.png", confidence=0.8)
+        zenith_btn = zenith_matches[0] if zenith_matches else None
+        
+        if select_opponent or zenith_btn:
+            break
+        
+        time.sleep(check_interval)
+    
+    if not select_opponent and not zenith_btn:
+        log_warning("[UnityRace] Neither Select Opponent nor Zenith Race detected within timeout.")
+        screenshot = take_screenshot()  # Take one final screenshot for error handling
 
     if select_opponent:
         log_info("[UnityRace] Select Opponent screen detected.")

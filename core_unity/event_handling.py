@@ -23,6 +23,8 @@ from utils.screenshot import take_screenshot, capture_region
 from core_unity.ocr import extract_event_name_text
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import deduplicated_matches
+from utils.input import tap
+import pytesseract
 
 # Load config and check debug mode
 with open("config.json", "r", encoding="utf-8") as config_file:
@@ -70,6 +72,107 @@ def _load_event_databases():
     return _event_cache
 
  
+
+def find_text_on_screen(search_text, region=None, confidence_threshold=70):
+    """
+    Search for text on screen using OCR and return its center coordinates.
+    
+    Args:
+        search_text: Text to search for (case-insensitive)
+        region: Optional (x, y, width, height) tuple to limit search area
+        confidence_threshold: Minimum OCR confidence (0-100)
+    
+    Returns:
+        tuple: (x, y) center coordinates if found, None otherwise
+    """
+    try:
+        from PIL import Image
+        import cv2
+        
+        # Take screenshot
+        screenshot = take_screenshot()
+        
+        # Crop to region if specified
+        if region:
+            x, y, w, h = region
+            img = screenshot.crop((x, y, x + w, y + h))
+            offset_x, offset_y = x, y
+        else:
+            img = screenshot
+            offset_x, offset_y = 0, 0
+        
+        # Convert to numpy array for OpenCV
+        img_np = np.array(img)
+        
+        # Convert to grayscale
+        if len(img_np.shape) == 3:
+            gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = img_np
+        
+        # Enhance for OCR
+        _, cleaned = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+        
+        # Get OCR data with bounding boxes
+        data = pytesseract.image_to_data(cleaned, config="-c preserve_interword_spaces=1", lang='eng', output_type=pytesseract.Output.DICT)
+        
+        search_text_lower = search_text.lower()
+        
+        # Search through all detected words
+        for i in range(len(data['text'])):
+            word = data['text'][i].strip()
+            conf = int(data['conf'][i])
+            
+            if not word or conf < confidence_threshold:
+                continue
+            
+            # Check if search text is in this word or vice versa
+            if search_text_lower in word.lower() or word.lower() in search_text_lower:
+                # Get bounding box
+                x = data['left'][i] + offset_x
+                y = data['top'][i] + offset_y
+                w = data['width'][i]
+                h = data['height'][i]
+                
+                # Return center coordinates
+                center_x = x + w // 2
+                center_y = y + h // 2
+                
+                log_info(f"Found '{search_text}' at ({center_x}, {center_y}) (OCR: '{word}', confidence: {conf})")
+                return center_x, center_y
+        
+        # If exact match not found, try searching for words that contain the search text
+        # This handles cases where OCR splits the text
+        words_found = []
+        for i in range(len(data['text'])):
+            word = data['text'][i].strip()
+            conf = int(data['conf'][i])
+            
+            if not word or conf < confidence_threshold:
+                continue
+            
+            if search_text_lower in word.lower():
+                x = data['left'][i] + offset_x
+                y = data['top'][i] + offset_y
+                w = data['width'][i]
+                h = data['height'][i]
+                center_x = x + w // 2
+                center_y = y + h // 2
+                words_found.append((center_x, center_y, word, conf))
+        
+        if words_found:
+            # Return the first match (highest confidence if sorted)
+            words_found.sort(key=lambda x: x[3], reverse=True)  # Sort by confidence
+            center_x, center_y, word, conf = words_found[0]
+            log_info(f"Found '{search_text}' (partial match: '{word}') at ({center_x}, {center_y}) (confidence: {conf})")
+            return center_x, center_y
+        
+        log_warning(f"Text '{search_text}' not found on screen")
+        return None
+        
+    except Exception as e:
+        log_error(f"Error searching for text '{search_text}': {e}")
+        return None
 
 def count_event_choices():
     """
@@ -463,6 +566,30 @@ def handle_event_choice():
                 return 1, False, recheck_locations
         
         log_info(f"Event found: {event_name}")
+
+        # Hardcoded event handling
+        # Handle "Tutorial" event - always choose 2nd choice
+        if "Tutorial" in event_name:
+            log_info("🎯 Hardcoded event: Tutorial - choosing 2nd choice")
+            choices_found, choice_locations = count_event_choices()
+            if choices_found >= 2:
+                log_info(f"Choose choice: 2")
+                return 2, True, choice_locations
+            else:
+                log_warning(f"Tutorial event detected but only {choices_found} choice(s) available, defaulting to first choice")
+                return 1, True, choice_locations
+        
+        # Handle "A Team at Last" event - always choose bottom (last) choice
+        if "A Team at Last" in event_name or "Team at Last" in event_name:
+            log_info("🎯 Hardcoded event: A Team at Last - choosing bottom (last) choice")
+            choices_found, choice_locations = count_event_choices()
+            if choices_found > 0:
+                choice_number = choices_found  # Last choice
+                log_info(f"Choose choice: {choice_number} (bottom/last choice)")
+                return choice_number, True, choice_locations
+            else:
+                log_warning(f"A Team at Last event detected but no choices available, defaulting to first choice")
+                return 1, True, choice_locations
 
         # Search for event in database
         found_events = search_events_exact(event_name)

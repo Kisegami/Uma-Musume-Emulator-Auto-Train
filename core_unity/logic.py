@@ -6,10 +6,12 @@ from utils.log import log_debug, log_info, log_warning, log_error
 with open("config.json", "r", encoding="utf-8") as file:
   config = json.load(file)
 
-PRIORITY_STAT = config["priority_stat"]
-MAX_FAILURE = config["maximum_failure"]
-STAT_CAPS = config["stat_caps"]
-DO_RACE_WHEN_BAD_TRAINING = config.get("do_race_when_bad_training", True)
+# Get training config with defaults
+training_config = config.get("training", {})
+PRIORITY_STAT = training_config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
+MAX_FAILURE = training_config.get("maximum_failure", 15)
+STAT_CAPS = training_config.get("stat_caps", {})
+DO_RACE_WHEN_BAD_TRAINING = training_config.get("do_race_when_bad_training", True)
 MIN_CONFIDENCE = 0.5  # Minimum confidence threshold for training decisions (currently used for retry logic)
 
 # Get priority stat from config
