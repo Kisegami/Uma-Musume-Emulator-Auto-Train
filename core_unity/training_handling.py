@@ -76,9 +76,13 @@ def go_to_training():
         time.sleep(0.5)
     return success
 
-def check_training():
+def check_training(go_back=True):
     """Check training results using fixed coordinates, collecting support counts,
-    bond levels and hint presence in one hover pass before computing failure rates."""
+    bond levels and hint presence in one hover pass before computing failure rates.
+    
+    Args:
+        go_back (bool): If True, go back to lobby after checking. If False, stay on training screen.
+    """
     log_debug(f"Checking training options...")
     
     # Fixed coordinates for each training type
@@ -146,15 +150,20 @@ def check_training():
 
         # Spirit/Unity training - pass screenshot to avoid taking new one
         spirit_count = check_spirit_training(screenshot, train_type=key)
+        # Get spirit training boxes for extra detection
+        spirit_training_boxes = _get_spirit_training_boxes(screenshot)
+        # Spirit training extra (after burst) - check burst_ed.png under spirit training locations
+        spirit_training_extra_count = check_spirit_training_extra(screenshot, spirit_training_boxes, train_type=key)
         # Spirit burst - pass screenshot to avoid taking new one
         spirit_burst_count = check_spirit_burst(screenshot, train_type=key)
 
         # Calculate score for this training type
-        score = calculate_training_score(detailed_support, hint_found, spirit_count, spirit_burst_count, key)
+        score = calculate_training_score(detailed_support, hint_found, spirit_count, spirit_burst_count, spirit_training_extra_count, key)
 
         log_debug(
             f"Support counts: {support_counts} | hint_found={hint_found} | "
-            f"spirit_count={spirit_count} | spirit_burst_count={spirit_burst_count} | score={score}"
+            f"spirit_count={spirit_count} | spirit_training_extra_count={spirit_training_extra_count} | "
+            f"spirit_burst_count={spirit_burst_count} | score={score}"
         )
 
         log_debug(f"Checking failure rate for {key.upper()} training...")
@@ -165,6 +174,7 @@ def check_training():
             "support": support_counts,
             "support_detail": detailed_support,
             "hint": bool(hint_found),
+            "spirit_training_extra": spirit_training_extra_count,
             "total_support": total_support,
             "failure": failure_chance,
             "confidence": confidence,
@@ -191,6 +201,7 @@ def check_training():
         
         log_info(f"hint={hint_found}")
         log_info(f"spirit_training={spirit_count}")
+        log_info(f"spirit_training_extra={spirit_training_extra_count}")
         log_info(f"spirit_burst={spirit_burst_count}")
         log_info(f"Fail: {failure_chance}% - Confident: {confidence:.2f}")
         log_info(f"Score: {score}")
@@ -211,9 +222,6 @@ def check_training():
         
 
     
-    log_debug(f"Going back from training screen...")
-    tap_on_image("assets/buttons/back_btn.png")
-    
     # Print overall summary
     log_info(f"\n=== Overall ===")
     for k in ["spd", "sta", "pwr", "guts", "wit"]:
@@ -221,19 +229,33 @@ def check_training():
             data = results[k]
             log_info(f"{k.upper()}: Score={data['score']:.2f}, Fail={data['failure']}% - Confident: {data['confidence']:.2f}")
     
+    # Only go back if requested
+    if go_back:
+        log_debug(f"Going back from training screen...")
+        tap_on_image("assets/buttons/back_btn.png")
+    else:
+        log_debug(f"Staying on training screen (go_back=False)")
+    
     return results
 
-def do_train(train):
-    """Perform training of specified type"""
+def do_train(train, already_on_training_screen=False):
+    """Perform training of specified type
+    
+    Args:
+        train (str): Training type to perform (spd, sta, pwr, guts, wit)
+        already_on_training_screen (bool): If True, skip navigation to training screen (already there)
+    """
     log_debug(f"Performing {train.upper()} training...")
     
-    # First, go to training screen
-    if not go_to_training():
-        log_debug(f"Failed to go to training screen, cannot perform {train.upper()} training")
-        return
-    
-    # Wait for screen to load and verify we're on training screen
-    time.sleep(0.3)
+    # Only go to training screen if not already there
+    if not already_on_training_screen:
+        if not go_to_training():
+            log_debug(f"Failed to go to training screen, cannot perform {train.upper()} training")
+            return
+        # Wait for screen to load and verify we're on training screen
+        time.sleep(0.3)
+    else:
+        log_debug(f"Already on training screen, skipping navigation")
     
     # Fixed coordinates for each training type
     training_coords = {
@@ -398,6 +420,30 @@ def _detect_unity_icon(
         return 0
 
 
+def _get_spirit_training_boxes(
+    screenshot,
+    template_path: str = "assets/unity/spirit_training.png",
+    confidence: float = 0.8,
+) -> list:
+    """
+    Get bounding boxes (x, y, w, h) of spirit training icons.
+    
+    Returns:
+        list: List of tuples (x, y, w, h) representing bounding boxes
+    """
+    try:
+        left, top, right, bottom = SUPPORT_CARD_ICON_REGION
+        region_cv = (left, top, right - left, bottom - top)
+        
+        matches = match_template(screenshot, template_path, confidence, region_cv)
+        filtered = deduplicated_matches(matches, threshold=30) if matches else []
+        
+        return filtered or []
+    except Exception as e:
+        log_debug(f" {_get_spirit_training_boxes.__name__} failed: {e}")
+        return []
+
+
 def check_spirit_training(
     screenshot,
     template_path: str = "assets/unity/spirit_training.png",
@@ -436,6 +482,78 @@ def check_spirit_burst(
         confidence=confidence,
         train_type=train_type,
     )
+
+
+def check_spirit_training_extra(
+    screenshot,
+    spirit_training_boxes: list,
+    template_path: str = "assets/unity/burst_ed.png",
+    confidence: float = 0.8,
+    train_type: str = "",
+) -> int:
+    """
+    Detect number of Spirit Training icons that have burst_ed.png below them (spirit training after burst).
+    
+    Args:
+        screenshot: PIL Image screenshot
+        spirit_training_boxes: List of bounding boxes (x, y, w, h) from spirit training detection
+        template_path: Path to burst_ed.png template
+        confidence: Template matching confidence threshold
+        train_type: Training type for debug purposes
+    
+    Returns:
+        int: Count of spirit training icons that have burst_ed.png below them
+    """
+    if not spirit_training_boxes:
+        return 0
+    
+    if not os.path.exists(template_path):
+        log_debug(f"Burst_ed template not found: {template_path}")
+        return 0
+    
+    # Offset from spirit training center to check region
+    # Based on example: Spirit Training center (1018, 643) => check region (990, 667, 1056, 784) in (x1, y1, x2, y2) format
+    # Region format: (x1, y1, x2, y2) = (left, top, right, bottom)
+    # Region size: width=66, height=117
+    # Offset: left_offset = -28, top_offset = 24 (positive = below center)
+    REGION_WIDTH = 66
+    REGION_HEIGHT = 117
+    LEFT_OFFSET = -28  # 28 pixels to the left of spirit training center
+    TOP_OFFSET = 24    # 24 pixels below spirit training center (positive = below)
+    
+    count = 0
+    
+    for x, y, w, h in spirit_training_boxes:
+        # Calculate spirit training center
+        center_x = x + w // 2
+        center_y = y + h // 2
+        
+        # Calculate region to check in (x1, y1, x2, y2) format = (left, top, right, bottom)
+        region_left = center_x + LEFT_OFFSET
+        region_top = center_y + TOP_OFFSET
+        region_right = region_left + REGION_WIDTH
+        region_bottom = region_top + REGION_HEIGHT
+        
+        # Ensure region is within screenshot bounds
+        img_width, img_height = screenshot.size
+        region_left = max(0, min(img_width - 1, region_left))
+        region_top = max(0, min(img_height - 1, region_top))
+        region_right = max(region_left + 1, min(img_width, region_right))
+        region_bottom = max(region_top + 1, min(img_height, region_bottom))
+        
+        # Convert to OpenCV format (x, y, width, height)
+        region_cv = (region_left, region_top, region_right - region_left, region_bottom - region_top)
+        
+        log_debug(f" Checking burst_ed for spirit training at ({center_x}, {center_y}) in region {region_cv}")
+        
+        # Check for burst_ed.png in this region
+        matches = match_template(screenshot, template_path, confidence, region_cv)
+        if matches:
+            count += 1
+            log_debug(f"  Found burst_ed.png below spirit training at ({center_x}, {center_y})")
+    
+    log_debug(f" Spirit training extra (after burst) count: {count}")
+    return count
 
 
 def _save_training_debug_overlay(
@@ -806,13 +924,16 @@ def choose_best_training(training_results, config, current_stats):
     log_debug(f" Best training selected: {best_training} (score: {sorted_options[0][1].get('score', 0):.2f})")
     return best_training
 
-def calculate_training_score(support_detail, hint_found, spirit_count, spirit_burst_count, training_type):
+def calculate_training_score(support_detail, hint_found, spirit_count, spirit_burst_count, spirit_training_extra_count, training_type):
     """
     Calculate training score based on support cards, bond levels, and hints.
     
     Args:
         support_detail: Dictionary of support card details with bond levels
         hint_found: Boolean indicating if hint is present
+        spirit_count: Number of spirit training icons
+        spirit_burst_count: Number of spirit burst icons
+        spirit_training_extra_count: Number of spirit training icons after burst
         training_type: The type of training being evaluated
     
     Returns:
@@ -881,6 +1002,11 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
     if spirit_count and spirit_count > 0:
         spirit_points = scoring_rules.get("spririt_training", {}).get("points", 0.5)
         score += spirit_points * spirit_count
+    
+    # Add spirit training extra (after burst) bonus per icon found
+    if spirit_training_extra_count and spirit_training_extra_count > 0:
+        spirit_extra_points = scoring_rules.get("spirit_training_extra", {}).get("points", 1.5)
+        score += spirit_extra_points * spirit_training_extra_count
 
     # Add spirit burst bonus per icon found (only if training_type is in enabled stats)
     if spirit_burst_count and spirit_burst_count > 0:

@@ -579,7 +579,8 @@ def career_lobby():
         # Last, do training
         log_debug(f"Analyzing training options...")
         time.sleep(0.5)
-        results_training = check_training()
+        # Stay on training screen after checking (don't go back to lobby yet)
+        results_training = check_training(go_back=False)
         
         log_debug(f"Deciding best training action using scoring algorithm...")
         
@@ -627,7 +628,8 @@ def career_lobby():
         if best_training:
             log_debug(f"Scoring algorithm selected: {best_training.upper()} training")
             log_info(f"Selected {best_training.upper()} training based on scoring algorithm")
-            do_train(best_training)
+            # Already on training screen, so skip navigation
+            do_train(best_training, already_on_training_screen=True)
         else:
             log_debug(f"No suitable training found based on scoring criteria")
             log_info(f"No suitable training found based on scoring criteria.")
@@ -648,6 +650,10 @@ def career_lobby():
                     wit_score = results_training.get('wit', {}).get('score', 0)
                     if wit_score < 1.0:
                         log_info(f"All training options unsafe and WIT score < 1.0. Choosing to rest.")
+                        # Need to go back to lobby first since we're still on training screen
+                        log_debug(f"Going back from training screen to lobby...")
+                        tap_on_image("assets/buttons/back_btn.png")
+                        time.sleep(0.3)
                         if should_use_dating_for_rest(screenshot):
                             log_info(f"Using dating instead of rest")
                             if not do_dating():
@@ -669,10 +675,15 @@ def career_lobby():
                         fallback_training = choose_best_training(results_training, relaxed_config, current_stats)
                         if fallback_training:
                             log_info(f"Proceeding with training ({fallback_training.upper()}) despite poor options (relaxed selection)")
-                            do_train(fallback_training)
+                            # Already on training screen, so skip navigation
+                            do_train(fallback_training, already_on_training_screen=True)
                             continue
                         else:
                             log_info(f"No viable training even after relaxed selection. Choosing to rest.")
+                            # Need to go back to lobby first since we're still on training screen
+                            log_debug(f"Going back from training screen to lobby...")
+                            tap_on_image("assets/buttons/back_btn.png")
+                            time.sleep(0.3)
                             if should_use_dating_for_rest(screenshot):
                                 log_info(f"Using dating instead of rest")
                                 if not do_dating():
@@ -698,11 +709,16 @@ def career_lobby():
                         fallback_training = choose_best_training(results_training, relaxed_config, current_stats)
                         if fallback_training:
                             log_info(f"Proceeding with training ({fallback_training.upper()}) due to no races")
-                            do_train(fallback_training)
+                            # Already on training screen, so skip navigation
+                            do_train(fallback_training, already_on_training_screen=True)
                             continue
                         else:
                             # If even relaxed cannot find, decide rest only if WIT score < 1.0, else do_rest as last resort
                             wit_score = results_training.get('wit', {}).get('score', 0)
+                            # Need to go back to lobby first since we're still on training screen
+                            log_debug(f"Going back from training screen to lobby...")
+                            tap_on_image("assets/buttons/back_btn.png")
+                            time.sleep(0.3)
                             if wit_score < 1.0:
                                 log_info(f"No viable training after relaxation and no races. Choosing to rest.")
                                 if should_use_dating_for_rest(screenshot):
@@ -772,6 +788,10 @@ def career_lobby():
                 # Race prioritization disabled: if no training was chosen here, rest
                 # (min_score and failure thresholds are still enforced)
                 log_info(f"Race prioritization disabled and no valid training found. Choosing to rest.")
+                # Need to go back to lobby first since we're still on training screen
+                log_debug(f"Going back from training screen to lobby...")
+                tap_on_image("assets/buttons/back_btn.png")
+                time.sleep(0.3)
                 if should_use_dating_for_rest(screenshot):
                     log_info(f"Using dating instead of rest")
                     if not do_dating():
