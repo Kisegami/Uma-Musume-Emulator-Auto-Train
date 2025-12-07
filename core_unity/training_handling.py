@@ -76,12 +76,13 @@ def go_to_training():
         time.sleep(0.5)
     return success
 
-def check_training(go_back=True):
+def check_training(go_back=True, year=None):
     """Check training results using fixed coordinates, collecting support counts,
     bond levels and hint presence in one hover pass before computing failure rates.
     
     Args:
         go_back (bool): If True, go back to lobby after checking. If False, stay on training screen.
+        year (str, optional): Current year to adjust scoring (e.g., "Finale Underway")
     """
     log_debug(f"Checking training options...")
     
@@ -163,7 +164,7 @@ def check_training(go_back=True):
         spirit_count_adjusted = max(0, spirit_count - spirit_training_extra_count)
 
         # Calculate score for this training type
-        score = calculate_training_score(detailed_support, hint_found, spirit_count_adjusted, spirit_burst_count, spirit_training_extra_count, key)
+        score = calculate_training_score(detailed_support, hint_found, spirit_count_adjusted, spirit_burst_count, spirit_training_extra_count, key, year=year)
 
         log_debug(
             f"Support counts: {support_counts} | hint_found={hint_found} | "
@@ -895,7 +896,7 @@ def choose_best_training(training_results, config, current_stats):
     log_debug(f" Best training selected: {best_training} (score: {sorted_options[0][1].get('score', 0):.2f})")
     return best_training
 
-def calculate_training_score(support_detail, hint_found, spirit_count, spirit_burst_count, spirit_training_extra_count, training_type):
+def calculate_training_score(support_detail, hint_found, spirit_count, spirit_burst_count, spirit_training_extra_count, training_type, year=None):
     """
     Calculate training score based on support cards, bond levels, and hints.
     
@@ -906,6 +907,7 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
         spirit_burst_count: Number of spirit burst icons
         spirit_training_extra_count: Number of spirit training icons after burst
         training_type: The type of training being evaluated
+        year (str, optional): Current year to adjust scoring (e.g., "Finale Underway")
     
     Returns:
         float: Calculated score for the training
@@ -970,14 +972,24 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
         score += scoring_rules.get("hint", {}).get("points", 0.3)
 
     # Add spirit/unity training bonus per icon found
+    # Set score to 0 for spirit_training in "Finale Underway" year
     if spirit_count and spirit_count > 0:
-        spirit_points = scoring_rules.get("spririt_training", {}).get("points", 0.5)
-        score += spirit_points * spirit_count
+        if year == "Finale Underway":
+            # Skip adding spirit_training score in Finale Underway
+            log_debug(f"Spirit training score set to 0 (Finale Underway year)")
+        else:
+            spirit_points = scoring_rules.get("spririt_training", {}).get("points", 0.5)
+            score += spirit_points * spirit_count
     
     # Add spirit training extra (after burst) bonus per icon found
+    # Set score to 0 for spirit_training_extra in "Finale Underway" year
     if spirit_training_extra_count and spirit_training_extra_count > 0:
-        spirit_extra_points = scoring_rules.get("spirit_training_extra", {}).get("points", 1.5)
-        score += spirit_extra_points * spirit_training_extra_count
+        if year == "Finale Underway":
+            # Skip adding spirit_training_extra score in Finale Underway
+            log_debug(f"Spirit training extra score set to 0 (Finale Underway year)")
+        else:
+            spirit_extra_points = scoring_rules.get("spirit_training_extra", {}).get("points", 1.5)
+            score += spirit_extra_points * spirit_training_extra_count
 
     # Add spirit burst bonus per icon found (only if training_type is in enabled stats)
     if spirit_burst_count and spirit_burst_count > 0:
