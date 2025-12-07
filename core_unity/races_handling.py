@@ -412,13 +412,13 @@ def race_prep():
         log_debug(f"View results button not found after {max_attempts} attempts")
         return
     
-    # Tap view results button
-    log_debug(f"Tapping view results button...")
-    tap(view_result_btn[0], view_result_btn[1])
-    
     # Check and ensure strategy matches config before race
     if not check_strategy_before_race():
         log_debug(f"Failed to ensure correct strategy, proceeding anyway...")
+
+        # Tap view results button
+    log_debug(f"Tapping view results button...")
+    tap(view_result_btn[0], view_result_btn[1])
     
     # Wait for next button or race to start with polling (200ms interval, tap between checks)
     log_debug(f"Waiting for next button or race to start...")

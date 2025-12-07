@@ -373,7 +373,7 @@ def career_lobby():
             continue
 
         log_debug(f"Confirmed in career lobby")
-        time.sleep(0.5)
+        time.sleep(0.2)
         # Take a fresh screenshot after confirming lobby to ensure stable UI state
         log_debug(f"Taking fresh screenshot after lobby confirmation...")
         screenshot = take_screenshot()

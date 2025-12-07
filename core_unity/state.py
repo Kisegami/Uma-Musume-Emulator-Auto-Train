@@ -447,7 +447,6 @@ def check_current_stats(screenshot=None):
     from utils.constants_unity import SPD_REGION, STA_REGION, PWR_REGION, GUTS_REGION, WIT_REGION
     from utils.screenshot import take_screenshot
     import pytesseract
-    from PIL import Image, ImageEnhance
     
     # Use provided screenshot or take new one if not provided
     if screenshot is None:
@@ -467,12 +466,7 @@ def check_current_stats(screenshot=None):
             # Crop to stat region from provided screenshot
             stat_img = screenshot.crop(region)
             
-            # Enhance image for better OCR
-            stat_img = stat_img.resize((stat_img.width * 2, stat_img.height * 2), Image.BICUBIC)
-            stat_img = stat_img.convert("L")  # Convert to grayscale
-            stat_img = ImageEnhance.Contrast(stat_img).enhance(2.0)  # Increase contrast
-            
-            # OCR the stat value
+            # Direct OCR on the stat value (no preprocessing)
             stat_text = pytesseract.image_to_string(stat_img, config='--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789').strip()
             
             # Try to extract the number

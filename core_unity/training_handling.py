@@ -158,12 +158,16 @@ def check_training(go_back=True):
         # Spirit burst - pass screenshot to avoid taking new one
         spirit_burst_count = check_spirit_burst(screenshot, train_type=key)
 
+        # Adjust spirit_count to avoid double-counting: spirit_training_extra icons are already counted in spirit_count
+        # Subtract them so we only count regular spirit training icons separately
+        spirit_count_adjusted = max(0, spirit_count - spirit_training_extra_count)
+
         # Calculate score for this training type
-        score = calculate_training_score(detailed_support, hint_found, spirit_count, spirit_burst_count, spirit_training_extra_count, key)
+        score = calculate_training_score(detailed_support, hint_found, spirit_count_adjusted, spirit_burst_count, spirit_training_extra_count, key)
 
         log_debug(
             f"Support counts: {support_counts} | hint_found={hint_found} | "
-            f"spirit_count={spirit_count} | spirit_training_extra_count={spirit_training_extra_count} | "
+            f"spirit_count={spirit_count} (adjusted: {spirit_count_adjusted}) | spirit_training_extra_count={spirit_training_extra_count} | "
             f"spirit_burst_count={spirit_burst_count} | score={score}"
         )
 
@@ -199,7 +203,7 @@ def check_training(go_back=True):
             log_info(f"-")
         
         log_info(f"hint={hint_found}")
-        log_info(f"spirit_training={spirit_count}")
+        log_info(f"spirit_training={spirit_count_adjusted} (total: {spirit_count}, extra: {spirit_training_extra_count})")
         log_info(f"spirit_training_extra={spirit_training_extra_count}")
         log_info(f"spirit_burst={spirit_burst_count}")
         log_info(f"Fail: {failure_chance}% - Confident: {confidence:.2f}")
@@ -212,7 +216,7 @@ def check_training(go_back=True):
                 training_type=key,
                 detailed_support=detailed_support,
                 hint_found=hint_found,
-                spirit_count=spirit_count,
+                spirit_count=spirit_count_adjusted,
                 spirit_burst_count=spirit_burst_count,
                 failure_chance=failure_chance,
                 confidence=confidence,
@@ -673,7 +677,6 @@ def check_failure(screenshot, train_type):
     Returns:
         (rate, confidence)
     """
-    log_debug(f" ===== STARTING FAILURE DETECTION for {train_type.upper()} =====")
     from utils.constants_unity import FAILURE_REGION_SPD, FAILURE_REGION_STA, FAILURE_REGION_PWR, FAILURE_REGION_GUTS, FAILURE_REGION_WIT
     from utils.screenshot import enhanced_screenshot, take_screenshot
     import numpy as np
@@ -697,11 +700,8 @@ def check_failure(screenshot, train_type):
     
     # Step 1: Try white-specialized OCR 3 times
     for attempt in range(3):
-        log_debug(f" White OCR attempt {attempt+1}/3 for {train_type.upper()}")
-        
         # Take new screenshot for each retry instead of shifting region
         if attempt > 0:
-            log_debug(f" Taking new screenshot for retry {attempt+1}")
             current_screenshot = take_screenshot()
         else:
             current_screenshot = screenshot
@@ -735,7 +735,6 @@ def check_failure(screenshot, train_type):
         # Get OCR data with confidence from enhanced white image
         ocr_data = pytesseract.image_to_data(np.array(white_img), config='--oem 3 --psm 6', output_type=pytesseract.Output.DICT)
         text = pytesseract.image_to_string(np.array(white_img), config='--oem 3 --psm 6').strip()
-        log_debug(f" White OCR result: '{text}'")
         
         # Calculate average confidence from OCR data
         confidences = [conf for conf in ocr_data['conf'] if conf != -1]
@@ -746,23 +745,15 @@ def check_failure(screenshot, train_type):
             if match:
                 rate = int(match.group(1))
                 if 0 <= rate <= 100:
-                    log_debug(f" Found percentage: {rate}% (white) confidence: {avg_confidence:.2f} for {train_type.upper()}")
                     if avg_confidence >= 0.8:
-                        log_debug(f" Confidence {avg_confidence:.2f} meets minimum 0.8, accepting result")
                         return (rate, avg_confidence)
-                    else:
-                        log_debug(f" Confidence {avg_confidence:.2f} below minimum 0.8, continuing to retry")
         if attempt < 2:
-            log_debug(f" No valid percentage found, retrying...")
             time.sleep(0.1)
     
     # Step 2: Try yellow threshold OCR 3 times
     for attempt in range(3):
-        log_debug(f" Yellow OCR attempt {attempt+1}/3 for {train_type.upper()}")
-        
         # Take new screenshot for each retry instead of shifting region
         if attempt > 0:
-            log_debug(f" Taking new screenshot for retry {attempt+1}")
             current_screenshot = take_screenshot()
         else:
             current_screenshot = screenshot
@@ -787,7 +778,6 @@ def check_failure(screenshot, train_type):
         # Get OCR data with confidence
         ocr_data = pytesseract.image_to_data(np.array(yellow_img), config='--oem 3 --psm 6', output_type=pytesseract.Output.DICT)
         text = pytesseract.image_to_string(np.array(yellow_img), config='--oem 3 --psm 6').strip()
-        log_debug(f" Yellow OCR result: '{text}'")
         
         # Calculate average confidence from OCR data
         confidences = [conf for conf in ocr_data['conf'] if conf != -1]
@@ -798,35 +788,19 @@ def check_failure(screenshot, train_type):
             if match:
                 rate = int(match.group(1))
                 if 0 <= rate <= 100:
-                    log_debug(f" Found percentage: {rate}% (yellow) confidence: {avg_confidence:.2f} for {train_type.upper()}")
                     if avg_confidence >= 0.9:
-                        log_debug(f" Confidence {avg_confidence:.2f} meets minimum 0.9, accepting result")
                         return (rate, avg_confidence)
-                    else:
-                        log_debug(f" Confidence {avg_confidence:.2f} below minimum 0.9, continuing to retry")
         if attempt < 2:
-            log_debug(f" No valid yellow percentage found, retrying...")
             time.sleep(0.1)
     
     # If we get here, all OCR attempts failed
-    log_debug(f" ===== FAILURE DETECTION FAILED for {train_type.upper()} =====")
-    log_debug(f" All OCR attempts failed to extract failure rate")
-    
     if DEBUG_MODE:
         # Save the original cropped region for debugging
         original_crop = screenshot.crop(region)
         debug_filename = f"debug_failure_{train_type}_failed_region.png"
         original_crop.save(debug_filename)
-        log_debug(f" Saved failed region to: {debug_filename}")
-        log_debug(f" Region coordinates: {region}")
-        log_debug(f" Region size: {original_crop.size}")
-        
-        # Stop execution in debug mode
-        log_debug(f" Stopping execution due to failure rate extraction failure for {train_type.upper()}")
-        log_debug(f" Please check the debug image: {debug_filename}")
         raise RuntimeError(f"Failure rate extraction failed for {train_type.upper()} training. Debug image saved to {debug_filename}")
     
-    log_debug(f" No valid failure rate found for {train_type.upper()}, returning 100% (safe fallback)")
     return (100, 0.0)  # 100% failure rate when detection completely fails (prevents choosing unknown training)
 
 def choose_best_training(training_results, config, current_stats):

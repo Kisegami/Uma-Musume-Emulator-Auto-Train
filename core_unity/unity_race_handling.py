@@ -1,7 +1,7 @@
 import time
 from typing import List, Tuple, Optional
 
-from utils.recognizer import match_template
+from utils.recognizer import match_template, locate_on_screen
 from utils.template_matching import deduplicated_matches
 from utils.screenshot import take_screenshot
 from utils.input import tap, wait_and_tap
@@ -74,6 +74,27 @@ def _center_of_bbox(bbox: Tuple[int, int, int, int]) -> Tuple[int, int]:
     return x + w // 2, y + h // 2
 
 
+def _double_tap(x: int, y: int):
+    """Tap twice with 100ms interval."""
+    tap(x, y)
+    time.sleep(0.1)
+    tap(x, y)
+
+
+def _wait_and_double_tap(template_path: str, timeout: float, check_interval: float = 0.2, confidence: float = 0.8) -> bool:
+    """Wait for template and double tap with 100ms interval."""
+    start = time.time()
+    while time.time() - start < timeout:
+        res = locate_on_screen(template_path, confidence=confidence)
+        if res:
+            cx, cy = res
+            _double_tap(cx, cy)
+            return True
+        time.sleep(check_interval)
+    log_warning(f"_wait_and_double_tap: {template_path} not found within timeout.")
+    return False
+
+
 def unity_race_workflow():
     """
     Unity Race handling workflow.
@@ -82,7 +103,7 @@ def unity_race_workflow():
     log_info("[UnityRace] Starting Unity race workflow...")
 
     # Tap Unity Race button first
-    if not wait_and_tap("assets/unity/unity_race.png", timeout=8):
+    if not _wait_and_double_tap("assets/unity/unity_race.png", timeout=8):
         log_warning("[UnityRace] unity_race.png not found/clicked; aborting workflow.")
         return False
 
@@ -130,18 +151,18 @@ def unity_race_workflow():
             rank, bbox = chosen
             cx, cy = _center_of_bbox(bbox)
             log_info(f"[UnityRace] Choosing opponent rank {rank}")
-            tap(cx, cy)
+            _double_tap(cx, cy)
         else:
             log_warning("[UnityRace] No suitable opponent found (<= team rank).")
 
         # Tap the select/confirm button (use bbox directly)
         sx, sy, sw, sh = select_opponent
-        tap(sx + sw // 2, sy + sh // 2)
+        _double_tap(sx + sw // 2, sy + sh // 2)
 
     elif zenith_btn:
         log_info("[UnityRace] Zenith Race button detected, tapping.")
         x, y, w, h = zenith_btn
-        tap(x + w // 2, y + h // 2)
+        _double_tap(x + w // 2, y + h // 2)
 
     else:
         log_warning("[UnityRace] Neither Select Opponent nor Zenith Race detected after tapping unity_race. Aborting.")
@@ -152,22 +173,22 @@ def unity_race_workflow():
     screenshot = take_screenshot()
 
     log_info("[UnityRace] Trying to begin showdown...")
-    wait_and_tap("assets/unity/begin_showdown.png", timeout=20)
+    _wait_and_double_tap("assets/unity/begin_showdown.png", timeout=20)
 
     log_info("[UnityRace] Waiting for 'See All Race Results'...")
-    wait_and_tap("assets/unity/see_all_race_btn.png", timeout=20)
+    _wait_and_double_tap("assets/unity/see_all_race_btn.png", timeout=20)
 
     log_info("[UnityRace] Skipping race...")
-    wait_and_tap("assets/buttons/skip_btn.png", timeout=20)
+    _wait_and_double_tap("assets/buttons/skip_btn.png", timeout=20)
 
     log_info("[UnityRace] Next...")
-    wait_and_tap("assets/buttons/next_btn.png", timeout=20)
+    _wait_and_double_tap("assets/buttons/next_btn.png", timeout=20)
 
     log_info("[UnityRace] Next Unity...")
-    wait_and_tap("assets/unity/next_unity.png", timeout=20)
+    _wait_and_double_tap("assets/unity/next_unity.png", timeout=20)
 
     log_info("[UnityRace] Final Next...")
-    wait_and_tap("assets/buttons/next_btn.png", timeout=20)
+    _wait_and_double_tap("assets/buttons/next_btn.png", timeout=20)
 
     log_info("[UnityRace] Workflow completed.")
     return True
