@@ -515,9 +515,33 @@ def choose_best_training(training_results, config, current_stats):
         return None
     
     max_failure = config.get("maximum_failure", 15)
-    min_score = config.get("min_score", 1.0)
-    min_wit_score = config.get("min_wit_score", 1.0)
+    min_score_config = config.get("min_score", {})
     priority_stat = config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
+    
+    # Handle backward compatibility: if min_score is a number, convert to dict
+    if isinstance(min_score_config, (int, float)):
+        default_score = min_score_config
+        min_score_config = {
+            "spd": default_score,
+            "sta": default_score,
+            "pwr": default_score,
+            "guts": default_score,
+            "wit": default_score
+        }
+        # Check for legacy min_wit_score
+        min_wit_score = config.get("min_wit_score", None)
+        if min_wit_score is not None:
+            min_score_config["wit"] = min_wit_score
+    
+    # Ensure all stats have a default value
+    default_min_score = 1.0
+    min_scores = {
+        "spd": min_score_config.get("spd", default_min_score),
+        "sta": min_score_config.get("sta", default_min_score),
+        "pwr": min_score_config.get("pwr", default_min_score),
+        "guts": min_score_config.get("guts", default_min_score),
+        "wit": min_score_config.get("wit", default_min_score)
+    }
     
     # Filter out training options with failure rates above maximum
     safe_options = {k: v for k, v in training_results.items() 
@@ -542,13 +566,12 @@ def choose_best_training(training_results, config, current_stats):
         log_debug(f" All training options filtered out by stat caps")
         return None
     
-    # Filter by minimum score requirements
+    # Filter by minimum score requirements (per-stat)
     valid_options = {}
     for k, v in capped_options.items():
         score = v.get('score', 0)
-        if k == 'wit' and score < min_wit_score:
-            continue
-        if score < min_score:
+        min_score_for_stat = min_scores.get(k, default_min_score)
+        if score < min_score_for_stat:
             continue
         valid_options[k] = v
     

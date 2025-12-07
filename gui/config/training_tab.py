@@ -25,6 +25,7 @@ class TrainingTab(BaseTab):
         self.priority_vars = []
         self.stat_boxes = []
         self.stat_cap_vars = {}
+        self.min_score_vars = {}
         
         # Training score variables
         self.rainbow_support_var = tk.DoubleVar(value=1.0)
@@ -135,36 +136,51 @@ class TrainingTab(BaseTab):
         self.min_energy_var.trace('w', self.on_training_setting_change)
         ctk.CTkEntry(energy_frame, textvariable=self.min_energy_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
         
+        # Minimum Training Score (per-stat) - Always visible and active
+        min_score_label = ctk.CTkLabel(settings_frame, text="Minimum Training Score (per stat):", 
+                                       text_color=self.colors['text_light'], font=get_font('label'))
+        min_score_label.pack(anchor=tk.W, padx=15, pady=(10, 5))
+        
+        # Handle backward compatibility: if min_score is a number, convert to dict
+        min_score_config = training_config.get('min_score', {})
+        if isinstance(min_score_config, (int, float)):
+            default_score = min_score_config
+            min_score_config = {
+                "spd": default_score,
+                "sta": default_score,
+                "pwr": default_score,
+                "guts": default_score,
+                "wit": default_score
+            }
+            # Check for legacy min_wit_score
+            min_wit_score = training_config.get('min_wit_score', None)
+            if min_wit_score is not None:
+                min_score_config["wit"] = min_wit_score
+        
+        # Ensure all stats have a default value
+        default_min_score = 1.0
+        self.min_score_vars = {}
+        stats = ['spd', 'sta', 'pwr', 'guts', 'wit']
+        for stat in stats:
+            score_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+            score_frame.pack(fill=tk.X, padx=15, pady=2)
+            stat_label = stat.upper() if stat != 'wit' else 'WIT'
+            ctk.CTkLabel(score_frame, text=f"{stat_label}:", text_color=self.colors['text_light'], 
+                        font=get_font('label'), width=80).pack(side=tk.LEFT)
+            var = tk.DoubleVar(value=min_score_config.get(stat, default_min_score))
+            var.trace('w', self.on_training_setting_change)
+            self.min_score_vars[stat] = var
+            ctk.CTkEntry(score_frame, textvariable=var, width=100, corner_radius=8).pack(side=tk.RIGHT)
+        
         # Do Race if no good training found
         race_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        race_frame.pack(fill=tk.X, padx=15, pady=5)
+        race_frame.pack(fill=tk.X, padx=15, pady=(10, 5))
         self.do_race_var = tk.BooleanVar(value=training_config.get('do_race_when_bad_training', False))
         self.do_race_var.trace('w', self.on_training_setting_change)
         race_checkbox = ctk.CTkCheckBox(race_frame, text="Do Race if no good training found", 
                                       variable=self.do_race_var, text_color=self.colors['text_light'],
-                                      font=get_font('checkbox'), command=self.toggle_race_settings)
+                                      font=get_font('checkbox'))
         race_checkbox.pack(anchor=tk.W)
-        
-        # Race-related settings (initially visible if do_race is True)
-        self.race_settings_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        if self.do_race_var.get():
-            self.race_settings_frame.pack(fill=tk.X, pady=5)
-        
-        # Minimum Training Score
-        score_frame = ctk.CTkFrame(self.race_settings_frame, fg_color="transparent")
-        score_frame.pack(fill=tk.X, pady=5)
-        ctk.CTkLabel(score_frame, text="Minimum Training Score:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.min_score_var = tk.DoubleVar(value=training_config.get('min_score', 1.0))
-        self.min_score_var.trace('w', self.on_training_setting_change)
-        ctk.CTkEntry(score_frame, textvariable=self.min_score_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
-        
-        # Minimum WIT Training Score
-        wit_score_frame = ctk.CTkFrame(self.race_settings_frame, fg_color="transparent")
-        wit_score_frame.pack(fill=tk.X, pady=5)
-        ctk.CTkLabel(wit_score_frame, text="Minimum WIT Training Score:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.min_wit_score_var = tk.DoubleVar(value=training_config.get('min_wit_score', 1.0))
-        self.min_wit_score_var.trace('w', self.on_training_setting_change)
-        ctk.CTkEntry(wit_score_frame, textvariable=self.min_wit_score_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
     
     def _create_stat_caps_section(self, parent, config):
         """Create the stat caps section"""
@@ -338,12 +354,10 @@ class TrainingTab(BaseTab):
         self.on_training_setting_change()
     
     def toggle_race_settings(self):
-        """Toggle visibility of race-related settings"""
-        if self.do_race_var.get():
-            self.race_settings_frame.pack(fill=tk.X, pady=5)
-        else:
-            self.race_settings_frame.pack_forget()
+        """Toggle visibility of race-related settings (no-op since min_score is always visible)"""
+        # min_score is now always visible and active, so no UI toggling needed
         # Auto-save is already triggered by the variable trace
+        pass
     
     def toggle_training_score(self, event):
         """Toggle training score section visibility"""
@@ -401,10 +415,13 @@ class TrainingTab(BaseTab):
             config['training']['min_energy'] = self.min_energy_var.get()
             config['training']['do_race_when_bad_training'] = self.do_race_var.get()
             
-            # Update race-related settings
-            if self.do_race_var.get():
-                config['training']['min_score'] = self.min_score_var.get()
-                config['training']['min_wit_score'] = self.min_wit_score_var.get()
+            # Update min_score settings (always saved, regardless of race setting)
+            config['training']['min_score'] = {
+                stat: var.get() for stat, var in self.min_score_vars.items()
+            }
+            # Remove legacy min_wit_score if it exists
+            if 'min_wit_score' in config['training']:
+                del config['training']['min_wit_score']
             
             # Update stat caps
             if 'stat_caps' not in config['training']:
@@ -510,10 +527,13 @@ class TrainingTab(BaseTab):
         config['training']['min_energy'] = self.min_energy_var.get()
         config['training']['do_race_when_bad_training'] = self.do_race_var.get()
         
-        # Update race-related settings
-        if self.do_race_var.get():
-            config['training']['min_score'] = self.min_score_var.get()
-            config['training']['min_wit_score'] = self.min_wit_score_var.get()
+        # Update min_score settings (always saved, regardless of race setting)
+        config['training']['min_score'] = {
+            stat: var.get() for stat, var in self.min_score_vars.items()
+        }
+        # Remove legacy min_wit_score if it exists
+        if 'min_wit_score' in config['training']:
+            del config['training']['min_wit_score']
         
         # Update stat caps
         if 'stat_caps' not in config['training']:

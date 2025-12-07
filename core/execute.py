@@ -493,17 +493,40 @@ def career_lobby():
         log_debug(f"Deciding best training action using scoring algorithm...")
         
         # Use existing config for scoring thresholds
+        min_score_config = config.get("min_score", {})
+        
+        # Handle backward compatibility: if min_score is a number, convert to dict
+        if isinstance(min_score_config, (int, float)):
+            default_score = min_score_config
+            min_score_config = {
+                "spd": default_score,
+                "sta": default_score,
+                "pwr": default_score,
+                "guts": default_score,
+                "wit": default_score
+            }
+            # Check for legacy min_wit_score
+            min_wit_score = config.get("min_wit_score", None)
+            if min_wit_score is not None:
+                min_score_config["wit"] = min_wit_score
+        
+        # Ensure all stats have a default value
+        default_min_score = 1.0
+        min_score_config = {
+            "spd": min_score_config.get("spd", default_min_score),
+            "sta": min_score_config.get("sta", default_min_score),
+            "pwr": min_score_config.get("pwr", default_min_score),
+            "guts": min_score_config.get("guts", default_min_score),
+            "wit": min_score_config.get("wit", default_min_score)
+        }
+        
         training_config = {
             "maximum_failure": config.get("maximum_failure", 15),
-            "min_score": config.get("min_score", 1.0),
-            "min_wit_score": config.get("min_wit_score", 1.0),
+            "min_score": min_score_config,
             "priority_stat": config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
         }
 
-        # If race fallback is disabled, ignore min_score entirely from the start
         do_race_when_bad_training_flag = config.get("do_race_when_bad_training", True)
-        if not do_race_when_bad_training_flag:
-            training_config["min_score"] = 0.0
         
         # Use new scoring algorithm to choose best training (with stat cap filtering)
         log_debug(f"Choosing best training with stat cap filtering. Current stats: {current_stats}")
@@ -538,10 +561,13 @@ def career_lobby():
                     else:
                         # Try to pick a training with relaxed thresholds despite high failure context
                         relaxed_config = dict(training_config)
-                        relaxed_config.update({
-                            'min_score': 0.0,
-                            'min_wit_score': 0.0
-                        })
+                        relaxed_config['min_score'] = {
+                            "spd": 0.0,
+                            "sta": 0.0,
+                            "pwr": 0.0,
+                            "guts": 0.0,
+                            "wit": 0.0
+                        }
                         fallback_training = choose_best_training(results_training, relaxed_config, current_stats)
                         if fallback_training:
                             log_info(f"Proceeding with training ({fallback_training.upper()}) despite poor options (relaxed selection)")
@@ -558,10 +584,13 @@ def career_lobby():
                         log_info(f"July/August detected. No races available during summer break. Trying training instead.")
                         # Try training with relaxed thresholds
                         relaxed_config = dict(training_config)
-                        relaxed_config.update({
-                            'min_score': 0.0,
-                            'min_wit_score': 0.0
-                        })
+                        relaxed_config['min_score'] = {
+                            "spd": 0.0,
+                            "sta": 0.0,
+                            "pwr": 0.0,
+                            "guts": 0.0,
+                            "wit": 0.0
+                        }
                         fallback_training = choose_best_training(results_training, relaxed_config, current_stats)
                         if fallback_training:
                             log_info(f"Proceeding with training ({fallback_training.upper()}) due to no races")
@@ -591,10 +620,13 @@ def career_lobby():
                             time.sleep(0.5)
                             # Try training with relaxed thresholds
                             relaxed_config = dict(training_config)
-                            relaxed_config.update({
-                                'min_score': 0.0,
-                                'min_wit_score': 0.0
-                            })
+                            relaxed_config['min_score'] = {
+                                "spd": 0.0,
+                                "sta": 0.0,
+                                "pwr": 0.0,
+                                "guts": 0.0,
+                                "wit": 0.0
+                            }
                             fallback_training = choose_best_training(results_training, relaxed_config, current_stats)
                             if fallback_training:
                                 log_info(f"Proceeding with training ({fallback_training.upper()}) after race not found")
@@ -609,9 +641,9 @@ def career_lobby():
                                     log_info(f"No training selected after relaxation. Choosing to rest.")
                                     do_rest()
             else:
-                # Race prioritization disabled: min_score already 0 at initial selection,
-                # so if no training was chosen here, rest (still enforcing failure and min_wit_score)
-                log_info(f"Race prioritization disabled and no valid training found (min_score ignored). Choosing to rest.")
+                # Race prioritization disabled: if no training was chosen here, rest
+                # (min_score and failure thresholds are still enforced)
+                log_info(f"Race prioritization disabled and no valid training found. Choosing to rest.")
                 do_rest()
         
         log_debug(f"Waiting before next iteration...")

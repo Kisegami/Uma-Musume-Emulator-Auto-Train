@@ -7,10 +7,12 @@ Dating can replace recreation/rest actions when available.
 
 import time
 import json
+import os
 from utils.recognizer import locate_on_screen, match_template
 from utils.input import tap
 from utils.screenshot import take_screenshot
 from utils.log import log_debug, log_info, log_warning, log_error
+from utils.template_matching import wait_for_image
 from core_unity.state import check_dating_available
 
 
@@ -19,11 +21,12 @@ def do_dating():
     Perform dating action.
     
     Flow:
-    1. Tap recreation button
-    2. Wait 200ms
-    3. Check for cancel button (normal recreation screen)
-    4. If cancel found, tap trainee_date.png
-    5. Otherwise, wait and tap pal_date.png
+    1. Wait for tazuna_hint to confirm we're in lobby
+    2. Tap recreation button
+    3. Wait 200ms
+    4. Check for cancel button (normal recreation screen)
+    5. If cancel found, tap trainee_date.png
+    6. Otherwise, wait and tap pal_date.png
     
     Returns:
         bool: True if dating was successfully initiated, False otherwise
@@ -32,24 +35,38 @@ def do_dating():
     log_info(f"Starting dating workflow...")
     
     try:
+        # Step 0: Wait for tazuna_hint to confirm we're in the lobby
+        log_debug(f"Waiting for tazuna_hint to confirm we're in lobby...")
+        tazuna_hint = wait_for_image("assets/ui/tazuna_hint.png", timeout=10, confidence=0.8)
+        if not tazuna_hint:
+            log_warning(f"tazuna_hint not found after waiting - may not be in lobby")
+            # Take screenshot and save debug image
+            screenshot = take_screenshot()
+            debug_filename = "debug_no_tazuna_hint_found.png"
+            screenshot.save(debug_filename)
+            log_error(f"Saved debug screenshot to: {debug_filename}")
+            log_error(f"Stopping bot execution - tazuna_hint not found")
+            raise RuntimeError(f"tazuna_hint not found. Debug image saved to {debug_filename}")
+        log_debug(f"tazuna_hint found, confirmed in lobby")
+        
         # Step 1: Tap recreation button
         log_debug(f"Looking for recreation button...")
         recreation_btn = locate_on_screen("assets/buttons/recreation_btn.png", confidence=0.8)
-        recreation_summer_btn = locate_on_screen("assets/buttons/rest_summer_btn.png", confidence=0.8)
         
         if recreation_btn:
             log_debug(f"Found recreation button at {recreation_btn}")
             log_info(f"Clicking recreation button to access dating...")
             tap(recreation_btn[0], recreation_btn[1])
             log_debug(f"Clicked recreation button")
-        elif recreation_summer_btn:
-            log_debug(f"Found summer recreation button at {recreation_summer_btn}")
-            log_info(f"Clicking summer recreation button to access dating...")
-            tap(recreation_summer_btn[0], recreation_summer_btn[1])
-            log_debug(f"Clicked summer recreation button")
         else:
             log_warning(f"No recreation button found - cannot access dating")
-            return False
+            # Take screenshot and save debug image
+            screenshot = take_screenshot()
+            debug_filename = "debug_no_recreation_button_found.png"
+            screenshot.save(debug_filename)
+            log_error(f"Saved debug screenshot to: {debug_filename}")
+            log_error(f"Stopping bot execution - recreation button not found")
+            raise RuntimeError(f"Recreation button not found. Debug image saved to {debug_filename}")
         
         # Step 2: Wait 200ms before checking
         time.sleep(0.2)
@@ -91,6 +108,9 @@ def do_dating():
                 log_warning(f"Pal date button not found - dating screen may not have loaded")
                 return False
                 
+    except RuntimeError as e:
+        # Re-raise RuntimeError to stop the bot (e.g., when recreation button not found)
+        raise
     except Exception as e:
         log_error(f"Dating workflow failed: {e}")
         return False

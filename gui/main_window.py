@@ -187,8 +187,13 @@ class MainWindow:
                 "minimum_mood": "GREAT",
                 "maximum_failure": 15,
                 "min_energy": 30,
-                "min_score": 1.0,
-                "min_wit_score": 1.0,
+                "min_score": {
+                    "spd": 1.0,
+                    "sta": 1.0,
+                    "pwr": 1.0,
+                    "guts": 1.0,
+                    "wit": 1.0
+                },
                 "do_race_when_bad_training": False,
                 "stat_caps": {
                     "spd": 1100,

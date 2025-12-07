@@ -730,9 +730,33 @@ def choose_best_training(training_results, config, current_stats):
         return None
     
     max_failure = config.get("maximum_failure", 15)
-    min_score = config.get("min_score", 1.0)
-    min_wit_score = config.get("min_wit_score", 1.0)
+    min_score_config = config.get("min_score", {})
     priority_stat = config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
+    
+    # Handle backward compatibility: if min_score is a number, convert to dict
+    if isinstance(min_score_config, (int, float)):
+        default_score = min_score_config
+        min_score_config = {
+            "spd": default_score,
+            "sta": default_score,
+            "pwr": default_score,
+            "guts": default_score,
+            "wit": default_score
+        }
+        # Check for legacy min_wit_score
+        min_wit_score = config.get("min_wit_score", None)
+        if min_wit_score is not None:
+            min_score_config["wit"] = min_wit_score
+    
+    # Ensure all stats have a default value
+    default_min_score = 1.0
+    min_scores = {
+        "spd": min_score_config.get("spd", default_min_score),
+        "sta": min_score_config.get("sta", default_min_score),
+        "pwr": min_score_config.get("pwr", default_min_score),
+        "guts": min_score_config.get("guts", default_min_score),
+        "wit": min_score_config.get("wit", default_min_score)
+    }
     
     # Filter out training options with failure rates above maximum
     safe_options = {k: v for k, v in training_results.items() 
@@ -757,13 +781,12 @@ def choose_best_training(training_results, config, current_stats):
         log_debug(f" All training options filtered out by stat caps")
         return None
     
-    # Filter by minimum score requirements
+    # Filter by minimum score requirements (per-stat)
     valid_options = {}
     for k, v in capped_options.items():
         score = v.get('score', 0)
-        if k == 'wit' and score < min_wit_score:
-            continue
-        if score < min_score:
+        min_score_for_stat = min_scores.get(k, default_min_score)
+        if score < min_score_for_stat:
             continue
         valid_options[k] = v
     
@@ -820,6 +843,20 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
             "spirit_burst": {"points": 1.0},
         }
     
+    # Load main config to check spirit_burst_enabled_stats
+    spirit_burst_enabled_stats = None
+    try:
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        config_path = os.path.join(base_dir, 'config.json')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            main_config = json.load(f)
+            training_config = main_config.get('training', {})
+            spirit_burst_enabled_stats = training_config.get('spirit_burst_enabled_stats', None)
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        log_debug(f"Could not load main config for spirit_burst_enabled_stats: {e}")
+        # If config not found, allow all stats (default behavior)
+        spirit_burst_enabled_stats = None
+    
     score = 0.0
     
     # Score support cards based on bond levels
@@ -845,9 +882,18 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
         spirit_points = scoring_rules.get("spririt_training", {}).get("points", 0.5)
         score += spirit_points * spirit_count
 
-    # Add spirit burst bonus per icon found
+    # Add spirit burst bonus per icon found (only if training_type is in enabled stats)
     if spirit_burst_count and spirit_burst_count > 0:
-        burst_points = scoring_rules.get("spirit_burst", {}).get("points", 1.0)
-        score += burst_points * spirit_burst_count
+        # If spirit_burst_enabled_stats is None or empty, allow all stats (default behavior)
+        # Otherwise, only add points if training_type is in the enabled list
+        if spirit_burst_enabled_stats is None or len(spirit_burst_enabled_stats) == 0:
+            # Default: allow all stats
+            burst_points = scoring_rules.get("spirit_burst", {}).get("points", 1.0)
+            score += burst_points * spirit_burst_count
+        elif training_type in spirit_burst_enabled_stats:
+            # Only add points if this training type is enabled
+            burst_points = scoring_rules.get("spirit_burst", {}).get("points", 1.0)
+            score += burst_points * spirit_burst_count
+        # If training_type is not in enabled_stats, spirit burst score is 0 (do nothing)
     
     return round(score, 2)
