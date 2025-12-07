@@ -16,15 +16,15 @@ def load_config():
         return {}
 
 def tap(x, y):
-    """Tap at coordinates (x, y)"""
-    return run_adb(['shell', 'input', 'tap', str(x), str(y)])
+    """Tap at coordinates (x, y) - optimized: no input delay"""
+    return run_adb(['shell', 'input', 'tap', str(x), str(y)], add_input_delay=False)
 
-def swipe(start_x, start_y, end_x, end_y, duration_ms=100):
-    """Swipe from (start_x, start_y) to (end_x, end_y) with duration in milliseconds"""
-    return run_adb(['shell', 'input', 'swipe', str(start_x), str(start_y), str(end_x), str(end_y), str(duration_ms)])
+def swipe(start_x, start_y, end_x, end_y, duration_ms=20):
+    """Swipe from (start_x, start_y) to (end_x, end_y) with duration in milliseconds - optimized: no input delay, faster default duration"""
+    return run_adb(['shell', 'input', 'swipe', str(start_x), str(start_y), str(end_x), str(end_y), str(duration_ms)], add_input_delay=False)
 
 def long_press(x, y, duration_ms=1000):
-    """Long press at coordinates (x, y) for duration_ms milliseconds"""
+    """Long press at coordinates (x, y) for duration_ms milliseconds - optimized: no input delay"""
     return swipe(x, y, x, y, duration_ms)
 
 def triple_click(x, y, interval=0.1):

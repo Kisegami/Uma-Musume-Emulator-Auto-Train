@@ -399,15 +399,36 @@ def race_prep():
     # Check and ensure strategy matches config before race
     if not check_strategy_before_race():
         log_debug(f"Failed to ensure correct strategy, proceeding anyway...")
+    
     if view_result_btn:
         log_debug(f"Found view results button at {view_result_btn}")
         tap(view_result_btn[0], view_result_btn[1])
-        time.sleep(0.5)
-        for i in range(1):
-            log_debug(f"Clicking view results {i + 1}/3")
-            triple_click(view_result_btn[0], view_result_btn[1], interval=0.01)
-            time.sleep(0.5)
-        time.sleep(1.0)
+        
+        # Spam tap with 200ms screenshot intervals until next button appears (20s timeout)
+        log_debug(f"Spam tapping and checking for next button (20s timeout)...")
+        max_attempts = 100  # 20 seconds max (100 * 200ms)
+        attempt = 0
+        
+        while attempt < max_attempts:
+            attempt += 1
+            
+            # Take screenshot and check for next button
+            screenshot = take_screenshot()
+            next_btn = locate_on_screen("assets/buttons/next_btn.png", confidence=0.8)
+            
+            if next_btn:
+                log_debug(f"Next button found after {attempt} attempts ({attempt * 0.2:.1f}s), tapping...")
+                tap(next_btn[0], next_btn[1])
+                break
+            
+            # Spam tap middle of screen every interval (200ms)
+            tap(540, 960)  # Click middle of screen
+            
+            # Wait 200ms before next iteration
+            time.sleep(0.2)
+        
+        if attempt >= max_attempts:
+            log_debug(f"Max attempts reached (20s), proceeding anyway...")
     else:
         log_debug(f"View results button not found, proceeding without strategy check")
 

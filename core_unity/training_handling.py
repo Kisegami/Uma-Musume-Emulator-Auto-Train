@@ -73,7 +73,7 @@ def go_to_training():
     success = tap_on_image("assets/buttons/training_btn.png", min_search=10)
     if success:
         # Wait 500 ms after pressing training button to allow screen to stabilize
-        time.sleep(0.5)
+        time.sleep(0.2)
     return success
 
 def check_training(go_back=True):
@@ -101,13 +101,14 @@ def check_training(go_back=True):
         # Proper hover simulation: move to position, hold, check, move away, release
         log_debug(f"Hovering over {key.upper()} training to check support cards...")
         
-        # Step 1: Hold at button position and move mouse up 300 pixels to simulate hover
+        # Step 1: Hold at button position and move mouse up 200 pixels to simulate hover
         log_debug(f"Holding at {key.upper()} training button and moving mouse up...")
-        # Swipe from button position up 300 pixels with longer duration to simulate holding and moving
+        # Swipe from button position up 200 pixels with optimized duration
         start_x, start_y = coords
-        end_x, end_y = start_x, start_y - 200  # Move up 300 pixels
-        swipe(start_x, start_y, end_x, end_y, duration_ms=100)  # Shorter duration for hover effect
-        time.sleep(0.1)  # Wait for hover effect to register
+        end_x, end_y = start_x, start_y - 200  # Move up 200 pixels
+        
+        swipe(start_x, start_y, end_x, end_y, duration_ms=20)  # Optimized: 20ms swipe duration
+        time.sleep(0.4)  # Wait for hover effect to register
         
         # Step 2: One pass: capture screenshot, evaluate support counts, bond levels, hint, and spirit training
         screenshot = take_screenshot()
@@ -181,10 +182,8 @@ def check_training(go_back=True):
             "score": score
         }
         
-        # Use clean format matching training_score_test.py exactly
         log_info(f"\n[{key.upper()}]")
         
-        # Show support card details (similar to test script)
         if detailed_support:
             support_lines = []
             for card_type, entries in detailed_support.items():
@@ -206,7 +205,7 @@ def check_training(go_back=True):
         log_info(f"Fail: {failure_chance}% - Confident: {confidence:.2f}")
         log_info(f"Score: {score}")
 
-        # Save per-stat debug overlay when in debug mode (used by failure_all test)
+        # Save per-stat debug overlay when in debug mode
         if DEBUG_MODE:
             _save_training_debug_overlay(
                 screenshot=screenshot,
@@ -221,7 +220,6 @@ def check_training(go_back=True):
             )
         
 
-    
     # Print overall summary
     log_info(f"\n=== Overall ===")
     for k in ["spd", "sta", "pwr", "guts", "wit"]:
@@ -310,7 +308,7 @@ def check_support_card(screenshot, threshold=0.9):
         log_debug(f"Saved search region to debug_support_cards_search_region.png")
 
     for key, icon_path in SUPPORT_ICONS.items():
-        log_debug(f"\nTesting {key.upper()} support card detection...")
+        log_debug(f"\nChecking {key.upper()} support card detection...")
         
         # Use single threshold for faster detection
         matches = match_template(screenshot, icon_path, 0.8, region_cv)
@@ -572,7 +570,6 @@ def _save_training_debug_overlay(
     - failure region box
     - support card bounding boxes
     - summary text including calculation values
-    Used primarily by the failure_all test.
     """
     try:
         img = screenshot.convert("RGB").copy()

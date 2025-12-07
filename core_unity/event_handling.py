@@ -528,7 +528,7 @@ def handle_event_choice():
     
     try:
         # Wait for event to stabilize (1.5 seconds)
-        time.sleep(1.5)
+        time.sleep(0.5)
 
         # Re-validate that this is a choices event before OCR (avoid scanning non-choice dialogs)
         recheck_count, recheck_locations = count_event_choices()

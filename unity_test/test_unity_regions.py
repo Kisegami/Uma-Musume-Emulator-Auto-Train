@@ -19,6 +19,7 @@ It will:
 
 import os
 import sys
+import time
 from typing import Optional, List, Tuple
 
 from PIL import ImageDraw
@@ -81,16 +82,20 @@ def _check_asset(name: str, path: str, screenshot) -> Optional[tuple]:
 
     # NOTE: current locate_on_screen implementation does not accept a screenshot parameter,
     # it captures internally, so we just call it with path + confidence.
+    start = time.perf_counter()
     loc = locate_on_screen(path, confidence=0.8)
+    elapsed = (time.perf_counter() - start) * 1000
+    
     if loc:
-        log_info(f"[{name}] FOUND at {loc}")
+        log_info(f"[{name}] FOUND at {loc} ({elapsed:.2f}ms)")
     else:
-        log_warning(f"[{name}] NOT FOUND")
+        log_warning(f"[{name}] NOT FOUND ({elapsed:.2f}ms)")
     return loc
 
 
 def test_buttons_and_tazuna(screenshot) -> List[Tuple[str, Tuple[int, int]]]:
     log_info("\n=== BUTTON / UI ELEMENT CHECK ===")
+    total_start = time.perf_counter()
     hits: List[Tuple[str, Tuple[int, int]]] = []
 
     loc = _check_asset("tazuna_hint", ASSETS["tazuna_hint"], screenshot)
@@ -128,46 +133,74 @@ def test_buttons_and_tazuna(screenshot) -> List[Tuple[str, Tuple[int, int]]]:
         if infirmary_loc:
             hits.append(("infirmary_btn", infirmary_loc))
 
+    total_time = (time.perf_counter() - total_start) * 1000
+    log_info(f"\nTotal button check time: {total_time:.2f}ms")
     return hits
 
 
 def test_state_ocr(screenshot):
     log_info("\n=== STATE / OCR CHECK ===")
+    total_start = time.perf_counter()
+    step_times = {}
 
     # Mood
+    step_start = time.perf_counter()
     mood = check_mood(screenshot)
-    log_info(f"Mood: {mood} (valid list: {MOOD_LIST})")
+    step_times["mood"] = (time.perf_counter() - step_start) * 1000
+    log_info(f"Mood: {mood} (valid list: {MOOD_LIST}) ({step_times['mood']:.2f}ms)")
 
     # Year
+    step_start = time.perf_counter()
     year = check_current_year(screenshot)
-    log_info(f"Year: {year}")
+    step_times["year"] = (time.perf_counter() - step_start) * 1000
+    log_info(f"Year: {year} ({step_times['year']:.2f}ms)")
 
     # Goal name
+    step_start = time.perf_counter()
     goal_name = check_goal_name(screenshot)
-    log_info(f"Goal name: {goal_name}")
+    step_times["goal_name"] = (time.perf_counter() - step_start) * 1000
+    log_info(f"Goal name: {goal_name} ({step_times['goal_name']:.2f}ms)")
 
     # Criteria/status text
+    step_start = time.perf_counter()
     criteria_text = check_criteria(screenshot)
-    log_info(f"Criteria text: {criteria_text}")
+    step_times["criteria"] = (time.perf_counter() - step_start) * 1000
+    log_info(f"Criteria text: {criteria_text} ({step_times['criteria']:.2f}ms)")
 
     # Stats
+    step_start = time.perf_counter()
     stats = check_current_stats(screenshot)
+    step_times["stats"] = (time.perf_counter() - step_start) * 1000
     log_info(
-        "Stats: "
+        f"Stats: "
         f"SPD={stats.get('spd', 0)}, "
         f"STA={stats.get('sta', 0)}, "
         f"PWR={stats.get('pwr', 0)}, "
         f"GUTS={stats.get('guts', 0)}, "
-        f"WIT={stats.get('wit', 0)}"
+        f"WIT={stats.get('wit', 0)} "
+        f"({step_times['stats']:.2f}ms)"
     )
 
     # Energy
+    step_start = time.perf_counter()
     energy = check_energy_bar(screenshot)
-    log_info(f"Energy: {energy:.1f}%")
+    step_times["energy"] = (time.perf_counter() - step_start) * 1000
+    log_info(f"Energy: {energy:.1f}% ({step_times['energy']:.2f}ms)")
 
     # Dating available
+    step_start = time.perf_counter()
     dating = check_dating_available(screenshot)
-    log_info(f"Dating available: {dating}")
+    step_times["dating"] = (time.perf_counter() - step_start) * 1000
+    log_info(f"Dating available: {dating} ({step_times['dating']:.2f}ms)")
+
+    # Print timing summary
+    total_time = (time.perf_counter() - total_start) * 1000
+    log_info(f"\n=== TIMING SUMMARY ===")
+    log_info(f"Total time: {total_time:.2f}ms")
+    log_info(f"Breakdown:")
+    for step_name, step_time in step_times.items():
+        percentage = (step_time / total_time) * 100 if total_time > 0 else 0
+        log_info(f"  {step_name:12s}: {step_time:7.2f}ms ({percentage:5.1f}%)")
 
     # Print regions for manual verification
     log_debug("\nRegions from utils.constants_unity:")
@@ -195,13 +228,16 @@ def test_failure_region(screenshot, train_type: str):
     log_info(f"\n=== FAILURE REGION / OCR CHECK ({train_type.upper()}) ===")
 
     try:
+        start = time.perf_counter()
         rate, conf = check_failure(screenshot, train_type)
-        log_info(f"[{train_type.upper()}] failure: {rate}% (confidence={conf:.2f})")
+        elapsed = (time.perf_counter() - start) * 1000
+        log_info(f"[{train_type.upper()}] failure: {rate}% (confidence={conf:.2f}) ({elapsed:.2f}ms)")
     except Exception as e:
+        elapsed = 0
         log_error(f"[{train_type.upper()}] failure check error: {e}")
 
 
-def test_failure_all_normal():
+def test_failure_all_normal(disable_input_delay=False):
     """
     Perform the normal in-game failure check flow for all stats via check_training().
 
@@ -209,36 +245,125 @@ def test_failure_all_normal():
     - go_to_training() (tap the training button)
     - run check_training(), which hovers each training, shows failure %, and OCRs it
     - log the resulting failure rates from the returned dict
+    
+    Args:
+        disable_input_delay: If True, temporarily set input_delay to 0.0 for this test
     """
     log_info("\n=== FAILURE REGION / NORMAL FLOW CHECK (ALL STATS) ===")
+    
+    # Handle input_delay modification if requested
+    original_delay = None
+    config_modified = False
+    if disable_input_delay:
+        log_info("⚠️  Testing with input_delay DISABLED (set to 0.0)")
+        try:
+            import json
+            # Read current config
+            with open('config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # Save original delay
+            adb_config = config.get('adb_config', {})
+            original_delay = adb_config.get('input_delay', 0.5)
+            log_info(f"  Original input_delay: {original_delay}s")
+            
+            # Set to 0.0
+            if 'adb_config' not in config:
+                config['adb_config'] = {}
+            config['adb_config']['input_delay'] = 0.0
+            
+            # Write back
+            with open('config.json', 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            
+            config_modified = True
+            log_info(f"  Temporarily set input_delay to: 0.0s")
+            log_info(f"  (Will restore to {original_delay}s after test)\n")
+            
+            # Force reload by clearing any cached config
+            import utils.device
+            if hasattr(utils.device, '_cached_config'):
+                delattr(utils.device, '_cached_config')
+                
+        except Exception as e:
+            log_warning(f"  Failed to modify input_delay: {e}")
+            log_warning(f"  Continuing with current config...\n")
+    
+    total_start = time.perf_counter()
 
     # Go to training screen
+    step_start = time.perf_counter()
     if not go_to_training():
         log_error("Could not go to training screen (training_btn not found). Make sure training screen is available.")
+        # Restore config if modified
+        if config_modified:
+            _restore_input_delay(original_delay)
         return None, None
+    go_to_training_time = (time.perf_counter() - step_start) * 1000
+    log_info(f"Go to training screen: {go_to_training_time:.2f}ms")
 
     # Let screen stabilize a bit
-    import time as _time
-    _time.sleep(0.5)
+    step_start = time.perf_counter()
+    time.sleep(0.5)
+    sleep_time = (time.perf_counter() - step_start) * 1000
+    log_info(f"Screen stabilization: {sleep_time:.2f}ms")
 
     # This will perform the usual swipe/hover + OCR for each stat
+    step_start = time.perf_counter()
     results = check_training()
+    check_training_time = (time.perf_counter() - step_start) * 1000
 
     if not results:
         log_warning("check_training() returned no results.")
         return None, None
 
     # Log a compact summary
+    log_info(f"\ncheck_training() total time: {check_training_time:.2f}ms")
     for key in ["spd", "sta", "pwr", "guts", "wit"]:
         if key in results:
             data = results[key]
             fail = data.get("failure", None)
             conf = data.get("confidence", None)
-            log_info(f"[{key.upper()}] failure: {fail}% (confidence={conf:.2f} if conf is not None else 0.0)")
+            conf_str = f"{conf:.2f}" if conf is not None else "0.0"
+            log_info(f"[{key.upper()}] failure: {fail}% (confidence={conf_str})")
 
     # Take a screenshot for plotting after the training check
+    step_start = time.perf_counter()
     screenshot = take_screenshot()
+    screenshot_time = (time.perf_counter() - step_start) * 1000
+    
+    total_time = (time.perf_counter() - total_start) * 1000
+    log_info(f"\n=== TIMING SUMMARY ===")
+    log_info(f"Total time: {total_time:.2f}ms")
+    log_info(f"Breakdown:")
+    log_info(f"  go_to_training:  {go_to_training_time:7.2f}ms")
+    log_info(f"  sleep (0.5s):    {sleep_time:7.2f}ms")
+    log_info(f"  check_training:  {check_training_time:7.2f}ms")
+    log_info(f"  screenshot:      {screenshot_time:7.2f}ms")
+    
+    # Restore original input_delay if modified
+    if config_modified:
+        _restore_input_delay(original_delay)
+        log_info(f"\n✓ Restored input_delay to: {original_delay}s")
+    
     return screenshot, results
+
+
+def _restore_input_delay(original_delay):
+    """Restore input_delay to original value"""
+    try:
+        import json
+        with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        if 'adb_config' not in config:
+            config['adb_config'] = {}
+        config['adb_config']['input_delay'] = original_delay
+        
+        with open('config.json', 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        log_error(f"Failed to restore input_delay: {e}")
 
 
 def save_debug_plot(
@@ -251,6 +376,7 @@ def save_debug_plot(
     Save a PNG with the screenshot and all important bounding boxes / hit points drawn.
     """
     try:
+        start = time.perf_counter()
         img = screenshot.convert("RGB").copy()
         draw = ImageDraw.Draw(img)
 
@@ -311,7 +437,8 @@ def save_debug_plot(
 
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         img.save(out_path)
-        log_info(f"Saved debug region plot to: {out_path}")
+        elapsed = (time.perf_counter() - start) * 1000
+        log_info(f"Saved debug region plot to: {out_path} ({elapsed:.2f}ms)")
     except Exception as e:
         log_error(f"Failed to save debug plot: {e}")
 
@@ -325,8 +452,14 @@ def main():
         log_info("Usage:")
         log_info("  python -m unity_test.test_unity_regions buttons")
         log_info("  python -m unity_test.test_unity_regions state")
-        log_info("  python -m unity_test.test_unity_regions failure <spd|sta|pwr|guts|wit>")
-        log_info("  python -m unity_test.test_unity_regions failure_all")
+        log_info("  python -m unity_test.test_unity_regions failure <spd|sta|pwr|guts|wit> [--hover]")
+        log_info("  python -m unity_test.test_unity_regions failure_all [--no-delay]")
+        log_info("\nOptions:")
+        log_info("  --hover       For failure mode: automatically hover over training type first")
+        log_info("  --no-delay    Disable input_delay for failure_all test (temporarily sets to 0.0)")
+        log_info("\nExamples:")
+        log_info("  python -m unity_test.test_unity_regions failure spd --hover")
+        log_info("  python -m unity_test.test_unity_regions failure_all --no-delay")
         return
 
     mode = args[0].lower()
@@ -334,14 +467,22 @@ def main():
     if mode == "buttons":
         log_info("Mode: BUTTONS")
         log_info("Make sure lobby screen with buttons is visible.")
+        screenshot_start = time.perf_counter()
         screenshot = take_screenshot()
+        screenshot_time = (time.perf_counter() - screenshot_start) * 1000
+        log_info(f"Screenshot capture: {screenshot_time:.2f}ms")
+        
         button_hits = test_buttons_and_tazuna(screenshot)
         save_debug_plot(screenshot, button_hits=button_hits, failure_train_type=None)
 
     elif mode == "state":
         log_info("Mode: STATE")
         log_info("Make sure a normal turn/lobby screen is visible.")
+        screenshot_start = time.perf_counter()
         screenshot = take_screenshot()
+        screenshot_time = (time.perf_counter() - screenshot_start) * 1000
+        log_info(f"Screenshot capture: {screenshot_time:.2f}ms")
+        
         test_state_ocr(screenshot)
         save_debug_plot(screenshot, button_hits=None, failure_train_type=None)
 
@@ -354,17 +495,67 @@ def main():
             log_error(f"Invalid training type '{train_type}'. Must be one of spd/sta/pwr/guts/wit.")
             return
 
-        log_info(f"Mode: FAILURE ({train_type.upper()})")
-        log_info("Make sure training screen is visible with failure % showing.")
+        # Check if user wants to hover first (--hover or -h flag)
+        hover_first = "--hover" in args or "-h" in args
+        
+        if hover_first:
+            log_info(f"Mode: FAILURE ({train_type.upper()}) - WITH HOVER")
+            log_info("Make sure you're in career lobby (bot will navigate and hover).")
+            
+            # Go to training screen
+            from core_unity.training_handling import go_to_training
+            step_start = time.perf_counter()
+            if not go_to_training():
+                log_error("Could not go to training screen (training_btn not found).")
+                return
+            go_to_training_time = (time.perf_counter() - step_start) * 1000
+            log_info(f"Go to training screen: {go_to_training_time:.2f}ms")
+            
+            # Wait for stabilization
+            time.sleep(0.5)
+            
+            # Hover over the training type
+            from utils.input import swipe
+            training_coords = {
+                "spd": (165, 1557),
+                "sta": (357, 1563),
+                "pwr": (546, 1557),
+                "guts": (735, 1566),
+                "wit": (936, 1572)
+            }
+            coords = training_coords[train_type]
+            start_x, start_y = coords
+            end_x, end_y = start_x, start_y - 200
+            
+            log_info(f"Hovering over {train_type.upper()} training...")
+            hover_start = time.perf_counter()
+            swipe(start_x, start_y, end_x, end_y, duration_ms=100)
+            time.sleep(0.1)
+            hover_time = (time.perf_counter() - hover_start) * 1000
+            log_info(f"Hover completed: {hover_time:.2f}ms")
+        else:
+            log_info(f"Mode: FAILURE ({train_type.upper()})")
+            log_info("Make sure training screen is visible with failure % showing.")
+            log_info("(Use --hover flag to automatically hover first)")
+        
+        screenshot_start = time.perf_counter()
         screenshot = take_screenshot()
+        screenshot_time = (time.perf_counter() - screenshot_start) * 1000
+        log_info(f"Screenshot capture: {screenshot_time:.2f}ms")
+        
         test_failure_region(screenshot, train_type)
         save_debug_plot(screenshot, button_hits=None, failure_train_type=train_type)
 
     elif mode == "failure_all":
-        log_info("Mode: FAILURE_ALL (normal flow via check_training)")
+        # Check for --no-delay flag
+        disable_delay = "--no-delay" in args or "-n" in args
+        if disable_delay:
+            log_info("Mode: FAILURE_ALL (normal flow via check_training) - WITH NO INPUT DELAY")
+        else:
+            log_info("Mode: FAILURE_ALL (normal flow via check_training)")
         log_info("Make sure training screen is reachable (bot will tap training button).")
 
-        screenshot, _results = test_failure_all_normal()
+        screenshot, _results = test_failure_all_normal(disable_input_delay=disable_delay)
         if screenshot is not None:
             save_debug_plot(screenshot, button_hits=None, failure_train_type="all")
 
