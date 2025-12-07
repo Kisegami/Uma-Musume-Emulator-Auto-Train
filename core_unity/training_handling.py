@@ -73,7 +73,7 @@ def go_to_training():
     success = tap_on_image("assets/buttons/training_btn.png", min_search=10)
     if success:
         # Wait 500 ms after pressing training button to allow screen to stabilize
-        time.sleep(0.2)
+        time.sleep(0.5)
     return success
 
 def check_training(go_back=True):
