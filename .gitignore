@@ -20,7 +20,7 @@ Thumbs.db
 config.json
 event_priority.json
 training_score.json
-
+training_score_unity.json
 # # Debug images and temporary files
 # debug_*.png
 # debug_*.jpg
@@ -41,7 +41,6 @@ temp_*.jpg
 annotated_*.png
 processed_*.png
 REF/
-training_score_unity.json
 skills_*.json
 unity_test/
 
