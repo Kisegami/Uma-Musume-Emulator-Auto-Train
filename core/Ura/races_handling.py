@@ -24,7 +24,8 @@ try:
     project_root = _get_project_root()
     with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as config_file:
         config = json.load(config_file)
-        RETRY_RACE = config.get("retry_race", True)
+        racing_config = config.get("racing", {})
+        RETRY_RACE = racing_config.get("retry_race", True)
 except Exception:
     RETRY_RACE = True
 
@@ -163,7 +164,8 @@ def race_day():
     with open("config.json", "r", encoding="utf-8") as file:
         config = json.load(file)
     
-    enable_skill_check = config.get("enable_skill_point_check", True)
+    skills_config = config.get("skills", {})
+    enable_skill_check = skills_config.get("enable_skill_point_check", True)
     
     if enable_skill_check:
         log_info(f"Race Day - Checking skill points cap...")
@@ -214,46 +216,41 @@ def race_day():
         race_prep()
         # time.sleep(1)
         
-        # Loop to check for either next button or clock icon with unlimited retries
-        log_debug(f"Checking for next button or clock icon with unlimited retries...")
+        # Loop to check for either next button or clock icon with polling (200ms interval, tap between checks)
+        log_debug(f"Checking for next button or clock icon with polling...")
         retry_count = 0
-        max_retries_per_race = 50  # Safety limit to prevent infinite loops
+        max_retries_per_race = 250  # 50 seconds timeout (250 * 200ms)
         
-        while True:
+        while retry_count < max_retries_per_race:
             retry_count += 1
             log_debug(f"Check attempt {retry_count}")
             
+            screenshot = take_screenshot()
+            
             # Check for clock icon (race failure)
-            clock = locate_on_screen("assets/icons/clock.png", confidence=0.8)
-            if clock:
+            clock_matches = match_template(screenshot, "assets/icons/clock.png", confidence=0.8)
+            if clock_matches:
                 log_debug(f"Clock icon found - race failed (attempt {retry_count}), handling retry...")
-                if retry_count > max_retries_per_race:
-                    log_debug(f"Max retries per race ({max_retries_per_race}) reached, proceeding anyway...")
-                    after_race()
-                    return True
-                
                 # Handle race retry
                 handle_race_retry_if_failed()
                 # Continue the loop to check again after retry
                 continue
             
             # Check for next button
-            next_btn = locate_on_screen("assets/buttons/next_btn.png", confidence=0.8)
-            if next_btn:
+            next_matches = match_template(screenshot, "assets/buttons/next_btn.png", confidence=0.8)
+            if next_matches:
                 log_debug(f"Next button found after {retry_count} attempts - proceeding with after_race...")
                 after_race()
                 return True
             
-            # If neither found, try tapping middle of screen and wait
-            log_debug(f"Neither clock nor next button found (attempt {retry_count}), tapping middle of screen...")
+            # Tap middle of screen between checks to advance UI
             tap(540, 960)  # Click middle of screen (1080x1920 resolution)
-            time.sleep(0.5)
-            
-            # Safety check to prevent infinite loops
-            if retry_count > max_retries_per_race:
-                log_debug(f"Safety limit reached ({max_retries_per_race} attempts), proceeding with after_race...")
-                after_race()
-                return True
+            time.sleep(0.2)  # 200ms interval
+        
+        # Safety check to prevent infinite loops
+        log_debug(f"Safety limit reached ({max_retries_per_race} attempts), proceeding with after_race...")
+        after_race()
+        return True
     return False
 
 def check_strategy_before_race(region=(660, 974, 378, 120)) -> bool:
@@ -304,7 +301,8 @@ def check_strategy_before_race(region=(660, 974, 378, 120)) -> bool:
         try:
             with open("config.json", "r", encoding="utf-8") as f:
                 config = json.load(f)
-            expected_strategy = config.get("strategy", "").upper()
+            racing_config = config.get("racing", {})
+            expected_strategy = racing_config.get("strategy", "").upper()
         except Exception:
             log_debug(f"Cannot read config.json")
             return False
@@ -398,22 +396,68 @@ def race_prep():
     """Prepare for race"""
     log_debug(f"Preparing for race...")
     
-    view_result_btn = wait_for_image("assets/buttons/view_results.png", timeout=20)
+    # Wait for view results button with polling (200ms interval, tap between checks)
+    log_debug(f"Waiting for view results button...")
+    view_result_btn = None
+    max_attempts = 100  # 20 seconds timeout (100 * 200ms)
+    
+    for attempt in range(max_attempts):
+        screenshot = take_screenshot()
+        view_result_matches = match_template(screenshot, "assets/buttons/view_results.png", confidence=0.8)
         
+        if view_result_matches:
+            x, y, w, h = view_result_matches[0]
+            view_result_btn = (x + w//2, y + h//2)
+            log_debug(f"Found view results button at {view_result_btn} (attempt {attempt + 1})")
+            break
+        
+        # Tap middle of screen between checks to advance UI
+        tap(540, 960)
+        time.sleep(0.2)  # 200ms interval
+    
+    if not view_result_btn:
+        log_debug(f"View results button not found after {max_attempts} attempts")
+        return
+    
     # Check and ensure strategy matches config before race
     if not check_strategy_before_race():
         log_debug(f"Failed to ensure correct strategy, proceeding anyway...")
-    if view_result_btn:
-        log_debug(f"Found view results button at {view_result_btn}")
-        tap(view_result_btn[0], view_result_btn[1])
-        time.sleep(0.5)
-        for i in range(1):
-            log_debug(f"Clicking view results {i + 1}/3")
-            triple_click(view_result_btn[0], view_result_btn[1], interval=0.01)
-            time.sleep(0.5)
-        time.sleep(1.0)
-    else:
-        log_debug(f"View results button not found, proceeding without strategy check")
+
+        # Tap view results button
+    log_debug(f"Tapping view results button...")
+    tap(view_result_btn[0], view_result_btn[1])
+    
+    # Wait for next button or race to start with polling (200ms interval, tap between checks)
+    log_debug(f"Waiting for next button or race to start...")
+    next_btn = None
+    race_started = False
+    
+    for attempt in range(max_attempts):
+        screenshot = take_screenshot()
+        next_matches = match_template(screenshot, "assets/buttons/next_btn.png", confidence=0.8)
+        
+        if next_matches:
+            x, y, w, h = next_matches[0]
+            next_btn = (x + w//2, y + h//2)
+            log_debug(f"Found next button at {next_btn} (attempt {attempt + 1})")
+            # Tap next button
+            tap(next_btn[0], next_btn[1])
+            race_started = True
+            break
+        
+        # Check if race has started (view results button disappeared)
+        view_result_check = match_template(screenshot, "assets/buttons/view_results.png", confidence=0.8)
+        if not view_result_check:
+            log_debug(f"View results button disappeared, race may have started (attempt {attempt + 1})")
+            race_started = True
+            break
+        
+        # Tap middle of screen between checks to advance UI
+        tap(540, 960)
+        time.sleep(0.2)  # 200ms interval
+    
+    if not race_started:
+        log_debug(f"Race did not start after {max_attempts} attempts")
 
 def handle_race_retry_if_failed():
     """Detect race failure on race day and retry based on config.
@@ -461,23 +505,77 @@ def after_race():
     """Handle post-race actions"""
     log_debug(f"Handling post-race actions...")
     
-    # Try to click first next button with fallback mechanism
-    if not tap_on_image("assets/buttons/next_btn.png", confidence=0.7, min_search=10):
-        log_debug(f"First next button not found after 10 attempts, clicking middle of screen as fallback...")
-        tap(540, 960)  # Click middle of screen (1080x1920 resolution)
-        time.sleep(0.5)
-        log_debug(f"Retrying next button search after screen tap...")
-        tap_on_image("assets/buttons/next_btn.png", confidence=0.7, min_search=10)
+    # Wait for first next button with polling (200ms interval, tap between checks)
+    log_debug(f"Waiting for first next button...")
+    next_btn = None
+    max_attempts = 150  # 30 seconds timeout (150 * 200ms)
     
-    time.sleep(3)
+    for attempt in range(max_attempts):
+        screenshot = take_screenshot()
+        
+        # Check for next button
+        next_matches = match_template(screenshot, "assets/buttons/next_btn.png", confidence=0.7)
+        if next_matches:
+            x, y, w, h = next_matches[0]
+            next_btn = (x + w//2, y + h//2)
+            log_debug(f"Found first next button at {next_btn} (attempt {attempt + 1})")
+            # Tap next button
+            tap(next_btn[0], next_btn[1])
+            break
+        
+        # Also check for clock icon (race failure can occur here too)
+        clock_matches = match_template(screenshot, "assets/icons/clock.png", confidence=0.8)
+        if clock_matches:
+            log_debug(f"Clock icon found during after_race, handling retry...")
+            handle_race_retry_if_failed()
+            # Restart waiting for next button after retry
+            attempt = -1  # Will be incremented to 0 in next iteration
+            continue
+        
+        # Tap middle of screen between checks to advance UI
+        tap(540, 960)
+        time.sleep(0.2)  # 200ms interval
     
-    # Try to click second next button with fallback mechanism
-    if not tap_on_image("assets/buttons/next2_btn.png", confidence=0.7, min_search=10):
-        log_debug(f"Second next button not found after 10 attempts, clicking middle of screen as fallback...")
-        tap(540, 960)  # Click middle of screen (1080x1920 resolution)
-        time.sleep(1)
-        log_debug(f"Retrying next2 button search after screen tap...")
-        tap_on_image("assets/buttons/next2_btn.png", confidence=0.7, min_search=10)
+    if not next_btn:
+        log_debug(f"First next button not found after {max_attempts} attempts")
+    
+    # Wait for second next button with polling and spam tap until it appears
+    log_debug(f"Waiting for second next button (spam tapping)...")
+    next2_btn = None
+    
+    for attempt in range(max_attempts):
+        screenshot = take_screenshot()
+        
+        # Check for second next button
+        next2_matches = match_template(screenshot, "assets/buttons/next2_btn.png", confidence=0.7)
+        if next2_matches:
+            x, y, w, h = next2_matches[0]
+            next2_btn = (x + w//2, y + h//2)
+            log_debug(f"Found second next button at {next2_btn} (attempt {attempt + 1})")
+            # Tap next2 button
+            tap(next2_btn[0], next2_btn[1])
+            break
+        
+        # Also check for clock icon (race failure can occur here too)
+        clock_matches = match_template(screenshot, "assets/icons/clock.png", confidence=0.8)
+        if clock_matches:
+            log_debug(f"Clock icon found during after_race (second next), handling retry...")
+            handle_race_retry_if_failed()
+            # Restart waiting for next buttons after retry
+            # Re-check first next button
+            next_matches = match_template(screenshot, "assets/buttons/next_btn.png", confidence=0.7)
+            if next_matches:
+                x, y, w, h = next_matches[0]
+                tap(x + w//2, y + h//2)
+            attempt = -1  # Will be incremented to 0 in next iteration
+            continue
+        
+        # Spam tap middle of screen between checks to advance UI
+        tap(540, 960)
+        time.sleep(0.2)  # 200ms interval
+    
+    if not next2_btn:
+        log_debug(f"Second next button not found after {max_attempts} attempts")
     
     log_debug(f"Post-race actions complete")
 
@@ -565,18 +663,19 @@ def find_and_do_race():
         
         # 3. Choose best race based on database and config criteria
         # Check if goal contains G1 and override allowed grades if so
-        from core.state import check_goal_name
+        from core.Ura.state import check_goal_name
         goal_name = check_goal_name()
         
         # Override allowed grades if goal contains G1
+        racing_config_section = config.get("racing", {})
         if goal_name and "G1" in goal_name:
             log_debug(f"Goal contains G1: '{goal_name}' - Overriding to only allow G1 races")
             allowed_grades = ["G1"]
         else:
-            allowed_grades = config.get("allowed_grades", ["G1", "G2", "G3", "OP", "PRE-OP"])
+            allowed_grades = racing_config_section.get("allowed_grades", ["G1", "G2", "G3", "OP", "PRE-OP"])
         
-        allowed_tracks = config.get("allowed_tracks", ["Turf", "Dirt"])
-        allowed_distances = config.get("allowed_distances", ["Sprint", "Mile", "Medium", "Long"])
+        allowed_tracks = racing_config_section.get("allowed_tracks", ["Turf", "Dirt"])
+        allowed_distances = racing_config_section.get("allowed_distances", ["Sprint", "Mile", "Medium", "Long"])
         
         # Find best race using the existing logic
         best_race = None

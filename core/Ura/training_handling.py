@@ -72,9 +72,13 @@ def go_to_training():
     log_debug(f"Going to training screen...")
     return tap_on_image("assets/buttons/training_btn.png", min_search=10)
 
-def check_training():
+def check_training(go_back=True):
     """Check training results using fixed coordinates, collecting support counts,
-    bond levels and hint presence in one hover pass before computing failure rates."""
+    bond levels and hint presence in one hover pass before computing failure rates.
+    
+    Args:
+        go_back (bool): If True, tap back to lobby after checking. If False, stay on training screen.
+    """
     log_debug(f"Checking training options...")
     
     # Fixed coordinates for each training type
@@ -93,13 +97,12 @@ def check_training():
         # Proper hover simulation: move to position, hold, check, move away, release
         log_debug(f"Hovering over {key.upper()} training to check support cards...")
         
-        # Step 1: Hold at button position and move mouse up 300 pixels to simulate hover
+        # Step 1: Hold at button position and move mouse up to simulate hover
         log_debug(f"Holding at {key.upper()} training button and moving mouse up...")
-        # Swipe from button position up 300 pixels with longer duration to simulate holding and moving
         start_x, start_y = coords
-        end_x, end_y = start_x, start_y - 200  # Move up 300 pixels
-        swipe(start_x, start_y, end_x, end_y, duration_ms=100)  # Shorter duration for hover effect
-        time.sleep(0.1)  # Wait for hover effect to register
+        end_x, end_y = start_x, start_y - 200
+        swipe(start_x, start_y, end_x, end_y, duration_ms=20)
+        time.sleep(0.3)  # Let hover info appear
         
         # Step 2: One pass: capture screenshot, evaluate support counts, bond levels, and hint
         screenshot = take_screenshot()
@@ -183,8 +186,9 @@ def check_training():
         
 
     
-    log_debug(f"Going back from training screen...")
-    tap_on_image("assets/buttons/back_btn.png")
+    if go_back:
+        log_debug(f"Going back from training screen...")
+        tap_on_image("assets/buttons/back_btn.png")
     
     # Print overall summary
     log_info(f"\n=== Overall ===")
@@ -195,17 +199,21 @@ def check_training():
     
     return results
 
-def do_train(train):
-    """Perform training of specified type"""
+def do_train(train, already_on_training_screen=False):
+    """Perform training of specified type
+    
+    Args:
+        train (str): Training type to perform (spd, sta, pwr, guts, wit)
+        already_on_training_screen (bool): If True, skip navigation to training screen (already there)
+    """
     log_debug(f"Performing {train.upper()} training...")
     
-    # First, go to training screen
-    if not go_to_training():
-        log_debug(f"Failed to go to training screen, cannot perform {train.upper()} training")
-        return
-    
-    # Wait for screen to load and verify we're on training screen
-    time.sleep(0.3)
+    # First, go to training screen unless already there
+    if not already_on_training_screen:
+        if not go_to_training():
+            log_debug(f"Failed to go to training screen, cannot perform {train.upper()} training")
+            return
+        time.sleep(0.3)  # Wait for screen to load
     
     # Fixed coordinates for each training type
     training_coords = {
@@ -552,7 +560,7 @@ def choose_best_training(training_results, config, current_stats):
         return None
     
     # Filter by stat caps BEFORE other filtering
-    from core.logic import filter_by_stat_caps
+    from core.Ura.logic import filter_by_stat_caps
     
     # Safety check for current_stats
     if not current_stats:

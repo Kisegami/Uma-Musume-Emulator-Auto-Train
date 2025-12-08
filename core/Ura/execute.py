@@ -42,8 +42,11 @@ from core.Ura.races_handling import (
 # Load config and check debug mode
 with open("config.json", "r", encoding="utf-8") as config_file:
     config = json.load(config_file)
+    training_config_section = config.get("training", {})
+    racing_config_section = config.get("racing", {})
+    skills_config_section = config.get("skills", {})
     DEBUG_MODE = config.get("debug_mode", False)
-    RETRY_RACE = config.get("retry_race", True)
+    RETRY_RACE = racing_config_section.get("retry_race", config.get("retry_race", True))
 
 from utils.log import log_debug, log_info, log_warning, log_error, log_success
 from utils.template_matching import deduplicated_matches, wait_for_image
@@ -179,7 +182,7 @@ def do_recreation():
 def career_lobby():
     """Main career lobby loop"""
     # Use existing config loaded at module level
-    MINIMUM_MOOD = config.get("minimum_mood", "GREAT")
+    MINIMUM_MOOD = training_config_section.get("minimum_mood", config.get("minimum_mood", "GREAT"))
     # Track last day we attempted a custom race but failed, to avoid re-checking within same day
     last_failed_custom_race_day = None
 
@@ -356,15 +359,19 @@ def career_lobby():
         # Check energy bar before proceeding with training decisions
         log_debug(f"Checking energy bar...")
         energy_percentage = check_energy_bar(screenshot)
-        min_energy = config.get("min_energy", 30)
+        min_energy = training_config_section.get("min_energy", config.get("min_energy", 30))
         
         log_info(f"Energy: {energy_percentage:.1f}% (Minimum: {min_energy}%)")
         
         # Get and display current stats
+        current_stats = {}
         try:
-            from core.state import check_current_stats
             current_stats = check_current_stats(screenshot)
-            stats_str = f"SPD: {current_stats.get('spd', 0)}, STA: {current_stats.get('sta', 0)}, PWR: {current_stats.get('pwr', 0)}, GUTS: {current_stats.get('guts', 0)}, WIT: {current_stats.get('wit', 0)}"
+            stats_str = (
+                f"SPD: {current_stats.get('spd', 0)}, STA: {current_stats.get('sta', 0)}, "
+                f"PWR: {current_stats.get('pwr', 0)}, GUTS: {current_stats.get('guts', 0)}, "
+                f"WIT: {current_stats.get('wit', 0)}"
+            )
             log_info(f"Current stats: {stats_str}")
         except Exception as e:
             log_debug(f"Could not get current stats: {e}")
@@ -397,7 +404,7 @@ def career_lobby():
             log_info(f"URA Finale")
             
             # Check skill points cap before URA race day (if enabled)
-            enable_skill_check = config.get("enable_skill_point_check", True)
+            enable_skill_check = skills_config_section.get("enable_skill_point_check", config.get("enable_skill_point_check", True))
             
             if enable_skill_check:
                 log_info(f"URA Finale Race Day - Checking skill points cap...")
@@ -435,7 +442,7 @@ def career_lobby():
 
         # Check for custom race (bypasses all criteria) - only if enabled in config
         log_debug(f"Checking if custom race is enabled...")
-        do_custom_race_enabled = config.get("do_custom_race", False)
+        do_custom_race_enabled = racing_config_section.get("do_custom_race", config.get("do_custom_race", False))
         
         if do_custom_race_enabled:
             # Build day key using current year and turn to avoid repeat checks in the same day
@@ -488,12 +495,12 @@ def career_lobby():
         # Last, do training
         log_debug(f"Analyzing training options...")
         time.sleep(0.5)
-        results_training = check_training()
+        results_training = check_training(go_back=False)
         
         log_debug(f"Deciding best training action using scoring algorithm...")
         
         # Use existing config for scoring thresholds
-        min_score_config = config.get("min_score", {})
+        min_score_config = training_config_section.get("min_score", config.get("min_score", {}))
         
         # Handle backward compatibility: if min_score is a number, convert to dict
         if isinstance(min_score_config, (int, float)):
@@ -521,12 +528,12 @@ def career_lobby():
         }
         
         training_config = {
-            "maximum_failure": config.get("maximum_failure", 15),
+            "maximum_failure": training_config_section.get("maximum_failure", config.get("maximum_failure", 15)),
             "min_score": min_score_config,
-            "priority_stat": config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"])
+            "priority_stat": training_config_section.get("priority_stat", config.get("priority_stat", ["spd", "sta", "wit", "pwr", "guts"]))
         }
 
-        do_race_when_bad_training_flag = config.get("do_race_when_bad_training", True)
+        do_race_when_bad_training_flag = training_config_section.get("do_race_when_bad_training", config.get("do_race_when_bad_training", True))
         
         # Use new scoring algorithm to choose best training (with stat cap filtering)
         log_debug(f"Choosing best training with stat cap filtering. Current stats: {current_stats}")
@@ -535,7 +542,7 @@ def career_lobby():
         if best_training:
             log_debug(f"Scoring algorithm selected: {best_training.upper()} training")
             log_info(f"Selected {best_training.upper()} training based on scoring algorithm")
-            do_train(best_training)
+            do_train(best_training, already_on_training_screen=True)
         else:
             log_debug(f"No suitable training found based on scoring criteria")
             log_info(f"No suitable training found based on scoring criteria.")
@@ -545,7 +552,7 @@ def career_lobby():
             
             if do_race_when_bad_training:
                 # Check if all training options have failure rates above maximum
-                from core.logic import all_training_unsafe
+                from core.Ura.logic import all_training_unsafe
                 max_failure = training_config.get('maximum_failure', 15)
                 log_debug(f"Checking if all training options have failure rate > {max_failure}%")
                 log_debug(f"Training results: {[(k, v['failure']) for k, v in results_training.items()]}")

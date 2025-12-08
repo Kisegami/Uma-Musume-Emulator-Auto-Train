@@ -46,3 +46,9 @@ unity_test/
 
 # Toolkit (bundled dependencies)
 toolkit/Git/
+dist/
+build/
+*.spec
+build_*.bat
+launcher_*.py
+toolkit/
