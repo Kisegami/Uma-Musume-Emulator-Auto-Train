@@ -1,6 +1,5 @@
 import time
 import subprocess
-import json
 import sys
 from utils.log import log_info, log_warning, log_error, log_success
 import os
@@ -17,14 +16,13 @@ if os.name == 'nt':  # Windows
         pass
 
 from utils.screenshot import get_screen_size, load_config
-import json
+from utils.config_loader import load_main_config
 
 # Load full config to determine mode
 def load_full_config():
     """Load full configuration from config.json"""
     try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
+        return load_main_config()
     except Exception as e:
         log_error(f"Error loading config: {e}")
         return {}

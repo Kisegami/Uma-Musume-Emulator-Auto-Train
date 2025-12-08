@@ -6,7 +6,6 @@ Dating can replace recreation/rest actions when available.
 """
 
 import time
-import json
 import os
 from utils.recognizer import locate_on_screen, match_template
 from utils.input import tap
@@ -14,6 +13,7 @@ from utils.screenshot import take_screenshot
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import wait_for_image
 from core.Unity.state import check_dating_available
+from utils.config_loader import load_main_config
 
 
 def do_dating():
@@ -159,8 +159,7 @@ def should_use_dating_for_rest(screenshot=None):
     """
     try:
         # Load config
-        with open("config.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
+        config = load_main_config()
         
         # Check if dating should replace rest
         replace_rest = config.get("dating", {}).get("use_dating_instead_of_rest", False)

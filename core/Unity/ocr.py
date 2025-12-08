@@ -4,8 +4,8 @@ import pytesseract
 import os
 import sys
 from PIL import Image, ImageOps, ImageEnhance
-import json
 import time
+import json
 
 # Fix Windows console encoding for Unicode support
 if os.name == 'nt':  # Windows
@@ -24,9 +24,9 @@ tessdata_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__fi
 os.environ['TESSDATA_PREFIX'] = tessdata_dir
 
 # Load config and check debug mode
-with open("config.json", "r", encoding="utf-8") as config_file:
-    config = json.load(config_file)
-    DEBUG_MODE = config.get("debug_mode", False)
+from utils.config_loader import load_main_config
+config = load_main_config()
+DEBUG_MODE = config.get("debug_mode", False)
 
 from utils.log import log_debug, log_info, log_warning, log_error
 

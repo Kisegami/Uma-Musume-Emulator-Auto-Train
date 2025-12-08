@@ -1,16 +1,12 @@
-import json
 import os
 import sys
 import logging
 from datetime import datetime
+from utils.config_loader import load_main_config
 
 # Load DEBUG_MODE once; fallback to False on error
-try:
-    with open("config.json", "r", encoding="utf-8") as _f:
-        _cfg = json.load(_f)
-        DEBUG_MODE = _cfg.get("debug_mode", False)
-except Exception:
-    DEBUG_MODE = False
+_cfg = load_main_config()
+DEBUG_MODE = _cfg.get("debug_mode", False)
 
 # Configure logger
 logger = logging.getLogger('uma_musume_bot')

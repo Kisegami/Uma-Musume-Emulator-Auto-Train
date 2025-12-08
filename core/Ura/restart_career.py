@@ -7,7 +7,6 @@ Handles career completion and auto-restart based on configuration.
 
 import sys
 import os
-import json
 import time
 from typing import Dict, Any, Optional, Tuple
 
@@ -19,13 +18,13 @@ from utils.screenshot import take_screenshot
 from utils.input import tap
 from core.Ura.skill_auto_purchase import click_image_button
 from core.Ura.ocr import extract_text, extract_number
+from utils.config_loader import load_main_config
 
 
 def load_restart_config() -> Dict[str, Any]:
     """Load restart career configuration from config.json"""
     try:
-        with open("config.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
+        config = load_main_config()
         return config.get('restart_career', {})
     except Exception as e:
         log_info(f"Error loading config: {e}")
@@ -219,8 +218,7 @@ def finish_career_completion() -> bool:
 def load_config():
     """Load configuration from config.json"""
     try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
+        return load_main_config()
     except Exception as e:
         log_info(f"Error loading config: {e}")
         return {}

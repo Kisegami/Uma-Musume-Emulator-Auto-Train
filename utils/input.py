@@ -1,16 +1,15 @@
 import subprocess
 import time
-import json
 from utils.device import run_adb
 from utils.recognizer import locate_on_screen
-
+from utils.config_loader import load_config_section
 from utils.log import log_info, log_warning, log_error, log_debug, log_success
+
+
 def load_config():
     """Load ADB configuration from config.json"""
     try:
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-            return config.get('adb_config', {})
+        return load_config_section('adb_config', {})
     except Exception as e:
         log_error(f"Error loading config: {e}")
         return {}

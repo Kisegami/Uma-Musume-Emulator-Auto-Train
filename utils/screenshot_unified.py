@@ -12,6 +12,7 @@ import numpy as np
 import cv2
 from utils.device import run_adb
 from utils.log import log_debug, log_info, log_warning, log_error
+from utils.config_loader import load_main_config
 
 
 class NemuIpcIncompatible(Exception):
@@ -477,8 +478,7 @@ class UnifiedScreenshot:
     def _load_config(self) -> dict:
         """Load configuration from config.json"""
         try:
-            with open('config.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
+            return load_main_config()
         except Exception as e:
             log_error(f"Error loading config: {e}")
             return {}

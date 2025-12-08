@@ -1,6 +1,5 @@
 import re
 import time
-import json
 import os
 
 from PIL import Image, ImageEnhance
@@ -17,12 +16,12 @@ from utils.constants_ura import (
     SKILL_PTS_REGION, FAILURE_REGION_SPD, FAILURE_REGION_STA, FAILURE_REGION_PWR, FAILURE_REGION_GUTS, FAILURE_REGION_WIT
 )
 
-# Load config and check debug mode
-with open("config.json", "r", encoding="utf-8") as config_file:
-    config = json.load(config_file)
-    DEBUG_MODE = config.get("debug_mode", False)
-
 from utils.log import log_debug, log_info, log_warning, log_error
+from utils.config_loader import load_main_config
+
+# Load config and check debug mode
+config = load_main_config()
+DEBUG_MODE = config.get("debug_mode", False)
 from utils.template_matching import deduplicated_matches
 
 # Get Stat
@@ -279,14 +278,12 @@ def check_skill_points(screenshot=None):
 
 def check_skill_points_cap(screenshot=None):
     """Check skill points and handle cap logic (same as PC version)"""
-    import json
     import tkinter as tk
     from tkinter import messagebox
     
     # Load config
     try:
-        with open("config.json", "r", encoding="utf-8") as file:
-            config = json.load(file)
+        config = load_main_config()
     except Exception as e:
         log_error(f"Error loading config: {e}")
         return True

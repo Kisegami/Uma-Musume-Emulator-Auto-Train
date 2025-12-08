@@ -1,10 +1,10 @@
 import subprocess
 import time
-import json
 import os
 import sys
 from pathlib import Path
 from utils.log import log_debug, log_info, log_warning, log_error
+from utils.config_loader import load_config_section
 
 def _find_bundled_adb():
     """
@@ -44,12 +44,7 @@ def _find_bundled_adb():
     return None
 
 def _load_adb_config():
-    try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            cfg = json.load(f)
-        return cfg.get('adb_config', {})
-    except Exception:
-        return {}
+    return load_config_section('adb_config', {})
 
 def _get_adb_path():
     """

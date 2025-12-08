@@ -1,5 +1,4 @@
 import time
-import json
 import os
 import random
 import sys
@@ -39,14 +38,13 @@ from core.Ura.races_handling import (
     after_race, is_racing_available, is_pre_debut_year
 )
 
-# Load config and check debug mode
-with open("config.json", "r", encoding="utf-8") as config_file:
-    config = json.load(config_file)
-    training_config_section = config.get("training", {})
-    racing_config_section = config.get("racing", {})
-    skills_config_section = config.get("skills", {})
-    DEBUG_MODE = config.get("debug_mode", False)
-    RETRY_RACE = racing_config_section.get("retry_race", config.get("retry_race", True))
+from utils.config_loader import load_main_config
+config = load_main_config()
+training_config_section = config.get("training", {})
+racing_config_section = config.get("racing", {})
+skills_config_section = config.get("skills", {})
+DEBUG_MODE = config.get("debug_mode", False)
+RETRY_RACE = racing_config_section.get("retry_race", config.get("retry_race", True))
 
 from utils.log import log_debug, log_info, log_warning, log_error, log_success
 from utils.template_matching import deduplicated_matches, wait_for_image

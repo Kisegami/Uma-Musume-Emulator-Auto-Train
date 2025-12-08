@@ -1,5 +1,4 @@
 import time
-import json
 import os
 import random
 import sys
@@ -43,12 +42,11 @@ from core.Unity.races_handling import (
     after_race, is_racing_available, is_pre_debut_year
 )
 
-# Load config and check debug mode
-with open("config.json", "r", encoding="utf-8") as config_file:
-    config = json.load(config_file)
-    DEBUG_MODE = config.get("debug_mode", False)
-    racing_config = config.get("racing", {})
-    RETRY_RACE = racing_config.get("retry_race", True)
+from utils.config_loader import load_main_config
+config = load_main_config()
+DEBUG_MODE = config.get("debug_mode", False)
+racing_config = config.get("racing", {})
+RETRY_RACE = racing_config.get("retry_race", True)
 
 from utils.log import log_debug, log_info, log_warning, log_error, log_success
 from utils.template_matching import deduplicated_matches, wait_for_image
@@ -515,21 +513,15 @@ def career_lobby():
         
         if do_custom_race_enabled:
             # Build day key using current year and turn to avoid repeat checks in the same day
-            day_key = f"{year}|{turn}"
-            if last_failed_custom_race_day == day_key:
-                log_debug(f"Skipping custom race check (already attempted and failed this day)")
+            log_debug(f"Custom race is enabled, checking for custom race...")
+            custom_race_found = do_custom_race()
+            if custom_race_found:
+            # Reset failure cache on success
+                last_failed_custom_race_day = None
+                log_info(f"Custom race executed successfully")
+                continue
             else:
-                log_debug(f"Custom race is enabled, checking for custom race...")
-                custom_race_found = do_custom_race()
-                if custom_race_found:
-                    # Reset failure cache on success
-                    last_failed_custom_race_day = None
-                    log_info(f"Custom race executed successfully")
-                    continue
-                else:
-                    log_debug(f"No custom race found or executed")
-                    # Remember that we failed this day to avoid re-checking until day changes
-                    last_failed_custom_race_day = day_key
+                log_debug(f"No custom race found or executed")
         else:
             log_debug(f"Custom race is disabled in config")
 

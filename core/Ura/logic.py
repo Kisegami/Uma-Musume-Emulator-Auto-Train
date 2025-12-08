@@ -1,10 +1,8 @@
-import json
-
 from core.Ura.state import check_current_year, stat_state
 from utils.log import log_debug, log_info, log_warning, log_error
+from utils.config_loader import load_main_config
 
-with open("config.json", "r", encoding="utf-8") as file:
-  config = json.load(file)
+config = load_main_config()
 
 # Training config (supports both nested and legacy keys)
 training_config = config.get("training", {})

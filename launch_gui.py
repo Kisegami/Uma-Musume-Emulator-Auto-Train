@@ -15,6 +15,7 @@ Usage:
 import sys
 import os
 import json
+from utils.config_loader import load_main_config
 
 def main():
     """Main launcher function"""
@@ -24,11 +25,7 @@ def main():
     # Check for updates before starting GUI
     try:
         # Load config
-        if os.path.exists('config.json'):
-            with open('config.json', 'r', encoding='utf-8') as f:
-                config = json.load(f)
-        else:
-            config = {}
+        config = load_main_config() if os.path.exists('config.json') else {}
         
         update_config = config.get('update', {})
         auto_update = update_config.get('auto_update', False)

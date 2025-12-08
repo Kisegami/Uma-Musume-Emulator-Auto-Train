@@ -10,6 +10,7 @@ from utils.input import tap, triple_click, long_press, tap_on_image, swipe
 from utils.screenshot import take_screenshot
 from utils.template_matching import wait_for_image, deduplicated_matches
 from utils.log import log_debug, log_info, log_warning, log_error, log_success
+from utils.config_loader import load_main_config
 from core.Ura.state import check_skill_points_cap, check_current_year
 from core.Ura.ocr import extract_text
 import os
@@ -19,14 +20,20 @@ def _get_project_root():
     """Get the project root directory (3 levels up from core/Ura/)"""
     return os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
+project_root = _get_project_root()
+
+
+def _load_config():
+    return load_main_config(os.path.join(project_root, "config.json"))
+
+
 # Load config for RETRY_RACE
 try:
-    project_root = _get_project_root()
-    with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as config_file:
-        config = json.load(config_file)
-        racing_config = config.get("racing", {})
-        RETRY_RACE = racing_config.get("retry_race", True)
+    config = _load_config()
+    racing_config = config.get("racing", {})
+    RETRY_RACE = racing_config.get("retry_race", True)
 except Exception:
+    config = {}
     RETRY_RACE = True
 
 # Region offsets from fan center (same as test code)
@@ -158,12 +165,7 @@ def search_race_with_swiping(race_description, year, max_swipes=3):
 def race_day():
     """Handle race day"""
     # Check skill points cap before race day (if enabled)
-    import json
-    
-    # Load config to check if skill point check is enabled
-    with open("config.json", "r", encoding="utf-8") as file:
-        config = json.load(file)
-    
+    config = _load_config()
     skills_config = config.get("skills", {})
     enable_skill_check = skills_config.get("enable_skill_point_check", True)
     
@@ -299,8 +301,7 @@ def check_strategy_before_race(region=(660, 974, 378, 120)) -> bool:
         
         # Load expected strategy from config
         try:
-            with open("config.json", "r", encoding="utf-8") as f:
-                config = json.load(f)
+            config = _load_config()
             racing_config = config.get("racing", {})
             expected_strategy = racing_config.get("strategy", "").upper()
         except Exception:
@@ -643,8 +644,7 @@ def find_and_do_race():
         
         # 2. Load configuration and race data
         try:
-            with open("config.json", "r", encoding="utf-8") as f:
-                config = json.load(f)
+            config = _load_config()
         except Exception as e:
             log_debug(f"Error loading config: {e}")
             return False
@@ -757,6 +757,7 @@ def do_custom_race():
     log_debug(f"Checking for custom race...")
     
     try:
+        project_root = _get_project_root()
         # 1. Get current year
         year = check_current_year()
         if not year:
@@ -765,9 +766,7 @@ def do_custom_race():
         # 2. Load custom races data
         try:
             # Read config to get optional custom race file override
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as cf:
-                cfg = json.load(cf)
+            cfg = _load_config()
             # config now stores custom race path under racing.custom_race_file
             custom_race_file = (
                 cfg.get("racing", {}).get("custom_race_file")

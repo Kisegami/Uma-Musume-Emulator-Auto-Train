@@ -24,6 +24,7 @@ from core.Unity.ocr import extract_event_name_text
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import deduplicated_matches
 from utils.input import tap
+from utils.config_loader import load_main_config
 import pytesseract
 
 # Helper function to get project root directory
@@ -33,9 +34,8 @@ def _get_project_root():
 
 # Load config and check debug mode
 project_root = _get_project_root()
-with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as config_file:
-    config = json.load(config_file)
-    DEBUG_MODE = config.get("debug_mode", False)
+config = load_main_config(os.path.join(project_root, "config.json"))
+DEBUG_MODE = config.get("debug_mode", False)
 
 # Cache for event databases to avoid reloading JSON files
 _event_cache = {

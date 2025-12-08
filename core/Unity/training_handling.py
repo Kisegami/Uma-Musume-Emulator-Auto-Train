@@ -12,14 +12,11 @@ from utils.screenshot import take_screenshot, enhanced_screenshot
 from utils.constants_unity import *
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import wait_for_image, deduplicated_matches
+from utils.config_loader import load_main_config
 
 # Load config for DEBUG_MODE
-try:
-    with open("config.json", "r", encoding="utf-8") as config_file:
-        config = json.load(config_file)
-        DEBUG_MODE = config.get("debug_mode", False)
-except Exception:
-    DEBUG_MODE = False
+config = load_main_config()
+DEBUG_MODE = config.get("debug_mode", False)
 
 
 
@@ -941,13 +938,9 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
     # Load main config to check spirit_burst_enabled_stats
     spirit_burst_enabled_stats = None
     try:
-        # Get project root: core/Unity/training_handling.py -> core/Unity -> core -> root
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        config_path = os.path.join(project_root, 'config.json')
-        with open(config_path, 'r', encoding='utf-8') as f:
-            main_config = json.load(f)
-            training_config = main_config.get('training', {})
-            spirit_burst_enabled_stats = training_config.get('spirit_burst_enabled_stats', None)
+        main_config = load_main_config()
+        training_config = main_config.get('training', {})
+        spirit_burst_enabled_stats = training_config.get('spirit_burst_enabled_stats', None)
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
         log_debug(f"Could not load main config for spirit_burst_enabled_stats: {e}")
         # If config not found, allow all stats (default behavior)
