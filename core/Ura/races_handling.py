@@ -43,7 +43,7 @@ def is_racing_available(year):
         return False
     year_parts = year.split(" ")
     # No races in July and August (summer break)
-    if len(year_parts) > 3 and year_parts[3] in ["Jul", "Aug"]:
+    if len(year_parts) > 3 and year_parts[3] in ["Jul", "Aug"] and year_parts[0] != "Junior":
         return False
     return True
 
