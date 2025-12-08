@@ -1,5 +1,5 @@
 {
-  "capture_method": "nemu_ipc",
+  "capture_method": "adb",
   "adb_config": {
     "device_address": "127.0.0.1:16448",
     "adb_path": "adb",
