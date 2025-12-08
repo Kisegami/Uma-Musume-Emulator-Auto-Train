@@ -5,6 +5,45 @@ import os
 from utils.screenshot import take_screenshot
 from utils.log import log_debug, log_info, log_warning, log_error
 
+def _get_project_root():
+    """Get the project root directory"""
+    # Try to find project root by looking for main.py or assets/ folder
+    # Start from this file's location (utils/recognizer.py)
+    current = os.path.dirname(os.path.abspath(__file__))
+    # Go up one level from utils/ to get project root
+    project_root = os.path.dirname(current)
+    
+    # Verify it's the project root by checking for main.py or assets/
+    if os.path.exists(os.path.join(project_root, 'main.py')) or os.path.exists(os.path.join(project_root, 'assets')):
+        return project_root
+    
+    # Fallback: try current working directory
+    cwd = os.getcwd()
+    if os.path.exists(os.path.join(cwd, 'main.py')) or os.path.exists(os.path.join(cwd, 'assets')):
+        return cwd
+    
+    # Last resort: return the calculated root anyway
+    return project_root
+
+def _resolve_asset_path(template_path):
+    """Resolve asset path relative to project root"""
+    # If path is already absolute, use it as-is
+    if os.path.isabs(template_path):
+        return template_path
+    
+    # If path exists as-is (relative to current working directory), use it
+    if os.path.exists(template_path):
+        return os.path.abspath(template_path)
+    
+    # Otherwise, resolve relative to project root
+    project_root = _get_project_root()
+    resolved_path = os.path.join(project_root, template_path)
+    
+    # Normalize the path (handle .. and .)
+    resolved_path = os.path.normpath(resolved_path)
+    
+    return resolved_path
+
 def match_template(screenshot, template_path, confidence=0.8, region=None):
     """
     Match template image on screenshot using OpenCV
@@ -19,10 +58,15 @@ def match_template(screenshot, template_path, confidence=0.8, region=None):
         List of (x, y, width, height) matches or None if not found
     """
     try:
+        # Resolve template path relative to project root
+        resolved_path = _resolve_asset_path(template_path)
+        
         # Load template
-        if not os.path.exists(template_path):
-            log_error(f"Template not found: {template_path}")
+        if not os.path.exists(resolved_path):
+            log_error(f"Template not found: {template_path} (resolved to: {resolved_path})")
             return []
+        
+        template_path = resolved_path  # Use resolved path for cv2.imread
         
         template = cv2.imread(template_path, cv2.IMREAD_COLOR)
         if template is None:
@@ -73,11 +117,14 @@ def max_match_confidence(screenshot, template_path, region=None):
         float: max normalized correlation score in [0,1], or None on error
     """
     try:
-        if not os.path.exists(template_path):
-            log_error(f"Template not found: {template_path}")
+        # Resolve template path relative to project root
+        resolved_path = _resolve_asset_path(template_path)
+        
+        if not os.path.exists(resolved_path):
+            log_error(f"Template not found: {template_path} (resolved to: {resolved_path})")
             return 0.0
 
-        template = cv2.imread(template_path, cv2.IMREAD_COLOR)
+        template = cv2.imread(resolved_path, cv2.IMREAD_COLOR)
         if template is None:
             log_error(f"Failed to load template: {template_path}")
             return 0.0

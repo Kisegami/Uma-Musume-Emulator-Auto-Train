@@ -1,8 +1,19 @@
 import time
 import subprocess
 import sys
-from utils.log import log_info, log_warning, log_error, log_success
 import os
+
+# Add script's directory to Python path (for embeddable Python compatibility)
+# This ensures utils/ and other modules can be found regardless of how Python is invoked
+if '__file__' in globals():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+else:
+    # Fallback: use current working directory or sys.argv[0] if available
+    script_dir = os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv else os.getcwd()
+if script_dir and script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+from utils.log import log_info, log_warning, log_error, log_success
 
 # Fix Windows console encoding for Unicode support
 if os.name == 'nt':  # Windows
@@ -38,14 +49,14 @@ else:
     from core.Ura.execute import career_lobby
     mode_name = "URA"
 
-from utils.device import run_adb
+from utils.device import run_adb, _get_adb_path
 
 # Logging is now handled by utils.log module
 
 def check_adb_connection():
     """Check if ADB is connected to a device"""
     adb_config = load_config()  # This returns adb_config section
-    adb_path = adb_config.get('adb_path', 'adb')
+    adb_path = _get_adb_path()  # Use the function that finds bundled ADB
     device_address = adb_config.get('device_address', '')
     
     try:
