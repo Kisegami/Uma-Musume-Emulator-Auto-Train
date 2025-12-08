@@ -63,12 +63,16 @@ def main():
         print("Checking configuration files...")
         config_summary = check_configs_from_gui()
         
-        if config_summary['created']:
-            print(f"✓ Created {len(config_summary['created'])} new configuration files")
-        if config_summary['updated']:
-            print(f"✓ Updated {len(config_summary['updated'])} configuration files with missing keys")
-        if config_summary['errors']:
-            print(f"⚠ {len(config_summary['errors'])} errors occurred during config creation")
+        created = config_summary.get("created", 0)
+        updated = config_summary.get("updated", 0)
+        errors = config_summary.get("errors", 0)
+
+        if created:
+            print(f"✓ Created {created} new configuration files")
+        if updated:
+            print(f"✓ Updated {updated} configuration files with missing keys")
+        if errors:
+            print(f"⚠ {errors} errors occurred during config creation")
         
     except Exception as e:
         print(f"Warning: Could not check configuration files: {e}")

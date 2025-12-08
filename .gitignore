@@ -54,3 +54,6 @@ launcher_*.py
 toolkit/
 launcher.exe
 _internal/
+custom_races.json
+skills.json
+.deps_installed
