@@ -768,7 +768,12 @@ def do_custom_race():
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as cf:
                 cfg = json.load(cf)
-            custom_race_file = cfg.get("custom_race_file", "custom_races.json")
+            # config now stores custom race path under racing.custom_race_file
+            custom_race_file = (
+                cfg.get("racing", {}).get("custom_race_file")
+                or cfg.get("custom_race_file")
+                or "custom_races.json"
+            )
             with open(os.path.join(project_root, custom_race_file), "r", encoding="utf-8") as f:
                 custom_races = json.load(f)
         except Exception as e:
