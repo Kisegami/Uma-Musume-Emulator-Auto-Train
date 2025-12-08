@@ -857,7 +857,7 @@ def choose_best_training(training_results, config, current_stats):
         return None
     
     # Filter by stat caps BEFORE other filtering
-    from core_unity.logic import filter_by_stat_caps
+    from core.Unity.logic import filter_by_stat_caps
     
     # Safety check for current_stats
     if not current_stats:
@@ -915,9 +915,10 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
     # Load scoring rules from training_score_unity.json (preferred) or fallback to training_score.json
     scoring_rules = {}
     try:
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        unity_path = os.path.join(base_dir, 'training_score_unity.json')
-        default_path = os.path.join(base_dir, 'training_score.json')
+        # Get project root: core/Unity/training_handling.py -> core/Unity -> core -> root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        unity_path = os.path.join(project_root, 'training_score_unity.json')
+        default_path = os.path.join(project_root, 'training_score.json')
 
         config_path = unity_path if os.path.exists(unity_path) else default_path
 
@@ -940,8 +941,9 @@ def calculate_training_score(support_detail, hint_found, spirit_count, spirit_bu
     # Load main config to check spirit_burst_enabled_stats
     spirit_burst_enabled_stats = None
     try:
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        config_path = os.path.join(base_dir, 'config.json')
+        # Get project root: core/Unity/training_handling.py -> core/Unity -> core -> root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        config_path = os.path.join(project_root, 'config.json')
         with open(config_path, 'r', encoding='utf-8') as f:
             main_config = json.load(f)
             training_config = main_config.get('training', {})

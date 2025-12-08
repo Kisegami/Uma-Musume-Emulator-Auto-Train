@@ -1,8 +1,8 @@
 import time
 import os
 import json
-from core.skill_recognizer import take_screenshot, perform_swipe, recognize_skill_up_locations
-from core.skill_purchase_optimizer import fuzzy_match_skill_name
+from core.Ura.skill_recognizer import take_screenshot, perform_swipe, recognize_skill_up_locations
+from core.Ura.skill_purchase_optimizer import fuzzy_match_skill_name
 from utils.device import run_adb
 from utils.log import log_debug, log_info, log_warning, log_error
 

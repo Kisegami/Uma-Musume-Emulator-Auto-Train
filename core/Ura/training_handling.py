@@ -606,7 +606,9 @@ def calculate_training_score(support_detail, hint_found, training_type):
     # Load scoring rules from training_score.json
     scoring_rules = {}
     try:
-        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'training_score.json')
+        # Get project root: core/Ura/training_handling.py -> core/Ura -> core -> root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        config_path = os.path.join(project_root, 'training_score.json')
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
             scoring_rules = config.get('scoring_rules', {})

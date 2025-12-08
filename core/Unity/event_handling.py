@@ -20,14 +20,20 @@ if os.name == 'nt':  # Windows
 
 from utils.recognizer import locate_all_on_screen
 from utils.screenshot import take_screenshot, capture_region
-from core_unity.ocr import extract_event_name_text
+from core.Unity.ocr import extract_event_name_text
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import deduplicated_matches
 from utils.input import tap
 import pytesseract
 
+# Helper function to get project root directory
+def _get_project_root():
+    """Get the project root directory (3 levels up from core/Unity/)"""
+    return os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
 # Load config and check debug mode
-with open("config.json", "r", encoding="utf-8") as config_file:
+project_root = _get_project_root()
+with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as config_file:
     config = json.load(config_file)
     DEBUG_MODE = config.get("debug_mode", False)
 
@@ -249,8 +255,10 @@ def count_event_choices():
 def load_event_priorities():
     """Load event priority configuration from event_priority.json"""
     try:
-        if os.path.exists("event_priority.json"):
-            with open("event_priority.json", "r", encoding="utf-8") as f:
+        project_root = _get_project_root()
+        event_priority_path = os.path.join(project_root, "event_priority.json")
+        if os.path.exists(event_priority_path):
+            with open(event_priority_path, "r", encoding="utf-8") as f:
                 priorities = json.load(f)
             return priorities
         else:

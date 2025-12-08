@@ -89,6 +89,13 @@
   "dating": {
     "use_dating_instead_of_rest": false
   },
+  "mode": "ura",
   "debug_mode": false,
-  "stop_on_event_detection_failure": false
+  "stop_on_event_detection_failure": false,
+  "update": {
+    "auto_update": false,
+    "install_dependencies": true,
+    "branch": "main",
+    "remote": "origin"
+  }
 }

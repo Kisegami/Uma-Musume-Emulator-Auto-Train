@@ -13,7 +13,7 @@ from utils.input import tap
 from utils.screenshot import take_screenshot
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import wait_for_image
-from core_unity.state import check_dating_available
+from core.Unity.state import check_dating_available
 
 
 def do_dating():

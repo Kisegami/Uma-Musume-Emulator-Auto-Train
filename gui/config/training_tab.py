@@ -33,16 +33,30 @@ class TrainingTab(BaseTab):
         self.high_bond_support_var = tk.DoubleVar(value=0.0)
         self.hint_var = tk.DoubleVar(value=0.3)
         
-        # Load training score configuration
-        self.load_training_score_config()
+        # Unity-specific training score variables
+        self.spirit_training_var = tk.DoubleVar(value=0.4)
+        self.spirit_burst_var = tk.DoubleVar(value=1.0)
+        self.spirit_training_extra_var = tk.DoubleVar(value=0.2)
+        
+        # Unity-specific variables
+        self.use_dating_var = None
+        self.spirit_burst_enabled_stats_vars = {}
         
         super().__init__(tabview, config_panel, colors, "Training")
+        
+        # Load training score configuration after main_window is available
+        self.load_training_score_config()
         
         # Set up auto-save callbacks for training score variables after base init
         self.add_variable_with_autosave('rainbow_support', self.rainbow_support_var, 'on_training_score_change')
         self.add_variable_with_autosave('low_bond_support', self.low_bond_support_var, 'on_training_score_change')
         self.add_variable_with_autosave('high_bond_support', self.high_bond_support_var, 'on_training_score_change')
         self.add_variable_with_autosave('hint', self.hint_var, 'on_training_score_change')
+        
+        # Unity-specific training score variables
+        self.add_variable_with_autosave('spirit_training', self.spirit_training_var, 'on_training_score_change')
+        self.add_variable_with_autosave('spirit_burst', self.spirit_burst_var, 'on_training_score_change')
+        self.add_variable_with_autosave('spirit_training_extra', self.spirit_training_extra_var, 'on_training_score_change')
     
     def create_tab(self):
         """Create the Training tab with all training-related settings"""
@@ -82,9 +96,12 @@ class TrainingTab(BaseTab):
                                        text_color=self.colors['text_gray'], font=get_font('body_medium'))
         instruction_label.pack(pady=(0, 15))
         
-        # Priority stats container with drag and drop
-        self.priority_container = ctk.CTkFrame(priority_frame, fg_color="transparent")
-        self.priority_container.pack(fill=tk.X, padx=15, pady=(0, 15))
+        # Priority stats container with drag and drop - centered
+        # Use a wrapper frame to center the container
+        wrapper_frame = ctk.CTkFrame(priority_frame, fg_color="transparent")
+        wrapper_frame.pack(fill=tk.X, pady=(0, 15))
+        self.priority_container = ctk.CTkFrame(wrapper_frame, fg_color="transparent")
+        self.priority_container.pack()
         
         # Create draggable stat boxes for the 5 fixed stats
         training_config = config.get('training', {})
@@ -161,16 +178,26 @@ class TrainingTab(BaseTab):
         default_min_score = 1.0
         self.min_score_vars = {}
         stats = ['spd', 'sta', 'pwr', 'guts', 'wit']
-        for stat in stats:
-            score_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-            score_frame.pack(fill=tk.X, padx=15, pady=2)
+        
+        # Create horizontal container for minimum training scores
+        min_score_container = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        min_score_container.pack(fill=tk.X, padx=15, pady=(0, 10))
+        
+        # Create horizontal stat score inputs (like table layout)
+        for i, stat in enumerate(stats):
+            stat_frame = ctk.CTkFrame(min_score_container, fg_color="transparent")
+            stat_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 3) if i < len(stats) - 1 else (0, 0))
+            
+            # Stat name label on top
             stat_label = stat.upper() if stat != 'wit' else 'WIT'
-            ctk.CTkLabel(score_frame, text=f"{stat_label}:", text_color=self.colors['text_light'], 
-                        font=get_font('label'), width=80).pack(side=tk.LEFT)
+            ctk.CTkLabel(stat_frame, text=stat_label, font=get_font('label'), 
+                        text_color=self.colors['text_gray']).pack(pady=(0, 5))
+            
+            # Stat score input below
             var = tk.DoubleVar(value=min_score_config.get(stat, default_min_score))
             var.trace('w', self.on_training_setting_change)
             self.min_score_vars[stat] = var
-            ctk.CTkEntry(score_frame, textvariable=var, width=100, corner_radius=8).pack(side=tk.RIGHT)
+            ctk.CTkEntry(stat_frame, textvariable=var, width=80, corner_radius=8).pack()
         
         # Do Race if no good training found
         race_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
@@ -181,6 +208,39 @@ class TrainingTab(BaseTab):
                                       variable=self.do_race_var, text_color=self.colors['text_light'],
                                       font=get_font('checkbox'))
         race_checkbox.pack(anchor=tk.W)
+        
+        # Unity-specific fields (initially hidden)
+        # Use dating instead of rest
+        self.dating_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        self.dating_frame.pack(fill=tk.X, padx=15, pady=(10, 5))
+        dating_config = config.get('dating', {})
+        self.use_dating_var = tk.BooleanVar(value=dating_config.get('use_dating_instead_of_rest', False))
+        self.use_dating_var.trace('w', self.on_training_setting_change)
+        dating_checkbox = ctk.CTkCheckBox(self.dating_frame, text="Use dating instead of rest", 
+                                         variable=self.use_dating_var, text_color=self.colors['text_light'],
+                                         font=get_font('checkbox'))
+        dating_checkbox.pack(anchor=tk.W)
+        
+        # Spirit burst enabled stats
+        self.spirit_burst_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        self.spirit_burst_frame.pack(fill=tk.X, padx=15, pady=(10, 5))
+        ctk.CTkLabel(self.spirit_burst_frame, text="Spirit Burst Enabled Stats:", 
+                    text_color=self.colors['text_light'], font=get_font('label')).pack(anchor=tk.W)
+        spirit_burst_checks = ctk.CTkFrame(self.spirit_burst_frame, fg_color="transparent")
+        spirit_burst_checks.pack(fill=tk.X)
+        stats = ['spd', 'sta', 'pwr', 'guts', 'wit']
+        existing_spirit_burst_stats = training_config.get('spirit_burst_enabled_stats', [])
+        for stat in stats:
+            var = tk.BooleanVar(value=stat in existing_spirit_burst_stats)
+            var.trace('w', self.on_training_setting_change)
+            self.spirit_burst_enabled_stats_vars[stat] = var
+            stat_label = stat.upper() if stat != 'wit' else 'WIT'
+            ctk.CTkCheckBox(spirit_burst_checks, text=stat_label, variable=var, 
+                          text_color=self.colors['text_light'], font=get_font('checkbox'), 
+                          width=50).pack(side=tk.LEFT, padx=(0, 15))
+        
+        # Initially hide Unity-specific fields
+        self.update_unity_fields_visibility()
     
     def _create_stat_caps_section(self, parent, config):
         """Create the stat caps section"""
@@ -396,6 +456,27 @@ class TrainingTab(BaseTab):
         hint_frame.pack(fill=tk.X, pady=5)
         ctk.CTkLabel(hint_frame, text="Hint:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
         ctk.CTkEntry(hint_frame, textvariable=self.hint_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
+        
+        # Unity-specific training score fields (only visible in Unity mode)
+        mode = self.main_window.get_config().get('mode', 'ura')
+        if mode == 'unity':
+            # Spirit Training
+            spirit_training_frame = ctk.CTkFrame(self.score_content_frame, fg_color="transparent")
+            spirit_training_frame.pack(fill=tk.X, pady=5)
+            ctk.CTkLabel(spirit_training_frame, text="Spirit Training:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
+            ctk.CTkEntry(spirit_training_frame, textvariable=self.spirit_training_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
+            
+            # Spirit Burst
+            spirit_burst_frame = ctk.CTkFrame(self.score_content_frame, fg_color="transparent")
+            spirit_burst_frame.pack(fill=tk.X, pady=5)
+            ctk.CTkLabel(spirit_burst_frame, text="Spirit Burst:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
+            ctk.CTkEntry(spirit_burst_frame, textvariable=self.spirit_burst_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
+            
+            # Spirit Training Extra
+            spirit_training_extra_frame = ctk.CTkFrame(self.score_content_frame, fg_color="transparent")
+            spirit_training_extra_frame.pack(fill=tk.X, pady=5)
+            ctk.CTkLabel(spirit_training_extra_frame, text="Spirit Training Extra:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
+            ctk.CTkEntry(spirit_training_extra_frame, textvariable=self.spirit_training_extra_var, width=100, corner_radius=8).pack(side=tk.RIGHT)
     
     def save_training_settings(self):
         """Save training settings to config"""
@@ -442,6 +523,9 @@ class TrainingTab(BaseTab):
     def save_training_score_config(self):
         """Save training score configuration"""
         try:
+            mode = self.main_window.get_config().get('mode', 'ura')
+            filename = 'training_score_unity.json' if mode == 'unity' else 'training_score.json'
+            
             config = {
                 "scoring_rules": {
                     "rainbow_support": {
@@ -463,7 +547,22 @@ class TrainingTab(BaseTab):
                 }
             }
             
-            with open('training_score.json', 'w', encoding='utf-8') as f:
+            # Add Unity-specific fields if in Unity mode
+            if mode == 'unity':
+                config["scoring_rules"]["spririt_training"] = {
+                    "description": "Spirit training",
+                    "points": self.spirit_training_var.get()
+                }
+                config["scoring_rules"]["spirit_burst"] = {
+                    "description": "Spirit burst",
+                    "points": self.spirit_burst_var.get()
+                }
+                config["scoring_rules"]["spirit_training_extra"] = {
+                    "description": "Spirit training after burst (Set this lower if you priortize gaining burst)",
+                    "points": self.spirit_training_extra_var.get()
+                }
+            
+            with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
                 
         except Exception as e:
@@ -472,8 +571,18 @@ class TrainingTab(BaseTab):
     def load_training_score_config(self):
         """Load training score configuration from file"""
         try:
-            if os.path.exists('training_score.json'):
-                with open('training_score.json', 'r', encoding='utf-8') as f:
+            # Determine which file to load based on mode
+            mode = 'ura'  # Default
+            try:
+                config = self.main_window.get_config()
+                mode = config.get('mode', 'ura')
+            except:
+                pass  # If main_window not available yet, use default
+            
+            filename = 'training_score_unity.json' if mode == 'unity' else 'training_score.json'
+            
+            if os.path.exists(filename):
+                with open(filename, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                 
                 # Update the variables with loaded values
@@ -495,6 +604,17 @@ class TrainingTab(BaseTab):
                 hint_config = scoring_rules.get('hint', {})
                 self.hint_var.set(hint_config.get('points', 0.3))
                 
+                # Unity-specific fields
+                if mode == 'unity':
+                    spirit_training_config = scoring_rules.get('spririt_training', {})
+                    self.spirit_training_var.set(spirit_training_config.get('points', 0.4))
+                    
+                    spirit_burst_config = scoring_rules.get('spirit_burst', {})
+                    self.spirit_burst_var.set(spirit_burst_config.get('points', 1.0))
+                    
+                    spirit_training_extra_config = scoring_rules.get('spirit_training_extra', {})
+                    self.spirit_training_extra_var.set(spirit_training_extra_config.get('points', 0.2))
+                
         except Exception as e:
             print(f"Error loading training score config: {e}")
             # Keep default values if loading fails
@@ -503,6 +623,36 @@ class TrainingTab(BaseTab):
         """Refresh training score values from the loaded configuration"""
         # This method can be called when the config is refreshed
         self.load_training_score_config()
+        # Refresh the displayed content if it's expanded
+        if hasattr(self, 'score_content_frame') and self.score_content_frame.winfo_viewable():
+            self.populate_training_score_content()
+    
+    def update_unity_fields_visibility(self):
+        """Update visibility of Unity-specific fields based on mode"""
+        mode = self.main_window.get_config().get('mode', 'ura')
+        
+        if mode == 'unity':
+            # Show Unity-specific fields
+            if hasattr(self, 'dating_frame'):
+                self.dating_frame.pack(fill=tk.X, padx=15, pady=(10, 5))
+            if hasattr(self, 'spirit_burst_frame'):
+                self.spirit_burst_frame.pack(fill=tk.X, padx=15, pady=(10, 5))
+            # Reload training score config to get Unity-specific values
+            self.load_training_score_config()
+            # Refresh training score content if expanded
+            if hasattr(self, 'score_content_frame') and self.score_content_frame.winfo_viewable():
+                self.populate_training_score_content()
+        else:
+            # Hide Unity-specific fields
+            if hasattr(self, 'dating_frame'):
+                self.dating_frame.pack_forget()
+            if hasattr(self, 'spirit_burst_frame'):
+                self.spirit_burst_frame.pack_forget()
+            # Reload training score config to get URA values
+            self.load_training_score_config()
+            # Refresh training score content if expanded
+            if hasattr(self, 'score_content_frame') and self.score_content_frame.winfo_viewable():
+                self.populate_training_score_content()
     
     def on_training_score_change(self, *args):
         """Called when any training score variable changes - auto-save"""
@@ -540,6 +690,20 @@ class TrainingTab(BaseTab):
             config['training']['stat_caps'] = {}
         for stat, var in self.stat_cap_vars.items():
             config['training']['stat_caps'][stat] = var.get()
+        
+        # Update Unity-specific fields if in Unity mode
+        mode = config.get('mode', 'ura')
+        if mode == 'unity':
+            # Update dating config
+            if self.use_dating_var is not None:
+                if 'dating' not in config:
+                    config['dating'] = {}
+                config['dating']['use_dating_instead_of_rest'] = self.use_dating_var.get()
+            
+            # Update spirit burst enabled stats
+            if self.spirit_burst_enabled_stats_vars:
+                enabled_stats = [stat for stat, var in self.spirit_burst_enabled_stats_vars.items() if var.get()]
+                config['training']['spirit_burst_enabled_stats'] = enabled_stats
     
     def on_training_setting_change(self, *args):
         """Called when any training setting variable changes - auto-save"""

@@ -10,12 +10,19 @@ from utils.input import tap, triple_click, long_press, tap_on_image, swipe
 from utils.screenshot import take_screenshot
 from utils.template_matching import wait_for_image, deduplicated_matches
 from utils.log import log_debug, log_info, log_warning, log_error, log_success
-from core.state import check_skill_points_cap, check_current_year
-from core.ocr import extract_text
+from core.Ura.state import check_skill_points_cap, check_current_year
+from core.Ura.ocr import extract_text
+import os
+
+# Helper function to get project root directory
+def _get_project_root():
+    """Get the project root directory (3 levels up from core/Ura/)"""
+    return os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 # Load config for RETRY_RACE
 try:
-    with open("config.json", "r", encoding="utf-8") as config_file:
+    project_root = _get_project_root()
+    with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as config_file:
         config = json.load(config_file)
         RETRY_RACE = config.get("retry_race", True)
 except Exception:
@@ -545,7 +552,8 @@ def find_and_do_race():
             return False
         
         try:
-            with open("assets/races/clean_race_data.json", "r", encoding="utf-8") as f:
+            project_root = _get_project_root()
+            with open(os.path.join(project_root, "assets/races/clean_race_data.json"), "r", encoding="utf-8") as f:
                 race_data = json.load(f)
         except Exception as e:
             log_debug(f"Error loading race data: {e}")
@@ -658,10 +666,11 @@ def do_custom_race():
         # 2. Load custom races data
         try:
             # Read config to get optional custom race file override
-            with open("config.json", "r", encoding="utf-8") as cf:
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            with open(os.path.join(project_root, "config.json"), "r", encoding="utf-8") as cf:
                 cfg = json.load(cf)
             custom_race_file = cfg.get("custom_race_file", "custom_races.json")
-            with open(custom_race_file, "r", encoding="utf-8") as f:
+            with open(os.path.join(project_root, custom_race_file), "r", encoding="utf-8") as f:
                 custom_races = json.load(f)
         except Exception as e:
             log_debug(f"Failed to load custom races file: {e}")
@@ -696,7 +705,8 @@ def do_custom_race():
         
         # Load race data to get the description for OCR matching
         try:
-            with open("assets/races/clean_race_data.json", "r", encoding="utf-8") as f:
+            project_root = _get_project_root()
+            with open(os.path.join(project_root, "assets/races/clean_race_data.json"), "r", encoding="utf-8") as f:
                 race_data = json.load(f)
         except Exception as e:
             log_debug(f"Error loading race data: {e}")

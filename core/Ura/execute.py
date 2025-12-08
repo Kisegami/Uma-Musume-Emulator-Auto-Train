@@ -24,16 +24,16 @@ from utils.constants_ura import (
 )
 
 # Import ADB state and logic modules
-from core.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar
+from core.Ura.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar
 
 # Import event handling functions
-from core.event_handling import count_event_choices, load_event_priorities, analyze_event_options, handle_event_choice, click_event_choice
+from core.Ura.event_handling import count_event_choices, load_event_priorities, analyze_event_options, handle_event_choice, click_event_choice
 
 # Import training handling functions
-from core.training_handling import go_to_training, check_training, do_train, check_support_card, check_failure, check_hint, choose_best_training, calculate_training_score
+from core.Ura.training_handling import go_to_training, check_training, do_train, check_support_card, check_failure, check_hint, choose_best_training, calculate_training_score
 
 # Import race handling functions
-from core.races_handling import (
+from core.Ura.races_handling import (
     find_and_do_race, do_custom_race, race_day, check_strategy_before_race,
     change_strategy_before_race, race_prep, handle_race_retry_if_failed,
     after_race, is_racing_available, is_pre_debut_year
@@ -74,7 +74,7 @@ def is_infirmary_active_adb(button_location, screenshot=None):
         avg_brightness = stat.mean[0]
         
         # Threshold for active button (same as PC version)
-        is_active = avg_brightness > 150
+        is_active = avg_brightness > 170
         log_debug(f"Infirmary brightness: {avg_brightness:.1f} ({'active' if is_active else 'disabled'})")
         
         return is_active

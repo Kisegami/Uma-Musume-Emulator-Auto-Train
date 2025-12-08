@@ -24,20 +24,20 @@ from utils.constants_unity import (
 )
 
 # Import ADB state and logic modules
-from core_unity.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar, check_dating_available
+from core.Unity.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar, check_dating_available
 
 # Import event handling functions
-from core_unity.event_handling import count_event_choices, load_event_priorities, analyze_event_options, handle_event_choice, click_event_choice
+from core.Unity.event_handling import count_event_choices, load_event_priorities, analyze_event_options, handle_event_choice, click_event_choice
 
 # Import training handling functions
-from core_unity.training_handling import go_to_training, check_training, do_train, check_support_card, check_failure, check_hint, choose_best_training, calculate_training_score
-from core_unity.unity_race_handling import unity_race_workflow
+from core.Unity.training_handling import go_to_training, check_training, do_train, check_support_card, check_failure, check_hint, choose_best_training, calculate_training_score
+from core.Unity.unity_race_handling import unity_race_workflow
 
 # Import dating handling functions
-from core_unity.dating_handling import do_dating, should_use_dating_for_mood, should_use_dating_for_rest
+from core.Unity.dating_handling import do_dating, should_use_dating_for_mood, should_use_dating_for_rest
 
 # Import race handling functions
-from core_unity.races_handling import (
+from core.Unity.races_handling import (
     find_and_do_race, do_custom_race, race_day, check_strategy_before_race,
     change_strategy_before_race, race_prep, handle_race_retry_if_failed,
     after_race, is_racing_available, is_pre_debut_year
@@ -79,7 +79,7 @@ def is_infirmary_active_adb(button_location, screenshot=None):
         avg_brightness = stat.mean[0]
         
         # Threshold for active button (same as PC version)
-        is_active = avg_brightness > 150
+        is_active = avg_brightness > 170
         log_debug(f"Infirmary brightness: {avg_brightness:.1f} ({'active' if is_active else 'disabled'})")
         
         return is_active
@@ -241,7 +241,7 @@ def career_lobby():
             complete_career_matches = match_template(screenshot, "assets/buttons/complete_career.png", confidence=0.8)
             if complete_career_matches:
                 log_info(f"Complete Career screen detected - starting restart workflow")
-                from core_unity.restart_career import career_lobby_check
+                from core.Unity.restart_career import career_lobby_check
                 should_continue = career_lobby_check(screenshot)
                 if not should_continue:
                     log_info(f"Career restart workflow completed - stopping bot")
@@ -427,7 +427,7 @@ def career_lobby():
         
         # Get and display current stats
         try:
-            from core_unity.state import check_current_stats
+            from core.Unity.state import check_current_stats
             current_stats = check_current_stats(screenshot)
             stats_str = f"SPD: {current_stats.get('spd', 0)}, STA: {current_stats.get('sta', 0)}, PWR: {current_stats.get('pwr', 0)}, GUTS: {current_stats.get('guts', 0)}, WIT: {current_stats.get('wit', 0)}"
             log_info(f"Current stats: {stats_str}")
@@ -639,7 +639,7 @@ def career_lobby():
             
             if do_race_when_bad_training:
                 # Check if all training options have failure rates above maximum
-                from core_unity.logic import all_training_unsafe
+                from core.Unity.logic import all_training_unsafe
                 max_failure = training_config.get('maximum_failure', 15)
                 log_debug(f"Checking if all training options have failure rate > {max_failure}%")
                 log_debug(f"Training results: {[(k, v['failure']) for k, v in results_training.items()]}")

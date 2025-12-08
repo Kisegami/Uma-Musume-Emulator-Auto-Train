@@ -17,16 +17,38 @@ if os.name == 'nt':  # Windows
         pass
 
 from utils.screenshot import get_screen_size, load_config
+import json
+
+# Load full config to determine mode
+def load_full_config():
+    """Load full configuration from config.json"""
+    try:
+        with open('config.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        log_error(f"Error loading config: {e}")
+        return {}
+
+config = load_full_config()
+mode = config.get("mode", "ura").lower()
+
+# Import the appropriate execute module based on mode
+if mode == "unity":
+    from core.Unity.execute import career_lobby
+    mode_name = "Unity Cup"
+else:
+    from core.Ura.execute import career_lobby
+    mode_name = "URA"
+
 from utils.device import run_adb
-from core.execute import career_lobby
 
 # Logging is now handled by utils.log module
 
 def check_adb_connection():
     """Check if ADB is connected to a device"""
-    config = load_config()
-    adb_path = config.get('adb_path', 'adb')
-    device_address = config.get('device_address', '')
+    adb_config = load_config()  # This returns adb_config section
+    adb_path = adb_config.get('adb_path', 'adb')
+    device_address = adb_config.get('device_address', '')
     
     try:
         result = subprocess.run([adb_path, 'devices'], capture_output=True, text=True, check=True)
@@ -101,8 +123,9 @@ def get_device_info():
         return False
 
 def main():
-    log_info("Uma Auto - ADB Version!")
+    log_info(f"Uma Auto - {mode_name} Version!")
     log_info("=" * 40)
+    log_info(f"Mode: {mode.upper()}")
     
     # Check ADB connection
     if not check_adb_connection():
@@ -114,7 +137,10 @@ def main():
     
     log_info("")
     log_success("Starting automation...")
-    log_info("Make sure Umamusume is running on your device!")
+    if mode == "unity":
+        log_info("Make sure Umamusume Unity Cup is running on your device!")
+    else:
+        log_info("Make sure Umamusume is running on your device!")
     log_info("Press Ctrl+C to stop the automation.")
     log_info("=" * 40)
     
@@ -128,4 +154,4 @@ def main():
         log_error("Automation error: " + str(e))
 
 if __name__ == "__main__":
-    main() 
+    main()

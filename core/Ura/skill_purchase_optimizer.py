@@ -2,7 +2,7 @@ import json
 import os
 import sys
 from difflib import SequenceMatcher
-from core_unity.skill_recognizer import scan_all_skills_with_scroll
+from core.Ura.skill_recognizer import scan_all_skills_with_scroll
 from utils.log import log_debug, log_info, log_warning, log_error
 
 # Global cache for skill names
@@ -57,8 +57,7 @@ def load_skill_config(config_path=None):
         try:
             with open("config.json", 'r', encoding='utf-8') as f:
                 main_config = json.load(f)
-                skills_config = main_config.get("skills", {})
-                config_path = skills_config.get("skill_file", "skills.json")
+                config_path = main_config.get("skill_file", "skills.json")
                 log_debug(f"Loading skills from config file: {config_path}")
         except Exception as e:
             log_debug(f"Could not read config.json, using default skills.json: {e}")

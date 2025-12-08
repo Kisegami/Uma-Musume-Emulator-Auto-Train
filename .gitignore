@@ -41,3 +41,9 @@ temp_*.jpg
 annotated_*.png
 processed_*.png
 REF/
+training_score_unity.json
+skills_*.json
+unity_test/
+
+# Toolkit (bundled dependencies)
+toolkit/Git/

@@ -20,7 +20,7 @@ if os.name == 'nt':  # Windows
 
 from utils.recognizer import locate_all_on_screen
 from utils.screenshot import take_screenshot, capture_region
-from core.ocr import extract_event_name_text
+from core.Ura.ocr import extract_event_name_text
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.template_matching import deduplicated_matches
 

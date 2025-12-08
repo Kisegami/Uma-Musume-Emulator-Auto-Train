@@ -70,9 +70,14 @@ def check_configuration_files():
         print(f"  - Total required: {config_summary['total_required']}")
         print(f"  - Existing: {config_summary['existing']}")
         print(f"  - Created: {config_summary['created']}")
+        if 'updated' in config_summary:
+            print(f"  - Updated: {config_summary['updated']}")
         
         if config_summary['created']:
             print("  ✓ New configuration files created from examples")
+        
+        if 'updated' in config_summary and config_summary['updated']:
+            print("  ✓ Configuration files updated with missing keys from examples")
         
         if config_summary['errors']:
             print("  ⚠ Some errors occurred during config file creation:")

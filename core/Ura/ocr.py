@@ -19,7 +19,8 @@ if os.name == 'nt':  # Windows
         pass
 
 # Configure Tesseract to use the custom trained data
-tessdata_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tessdata')
+# Go up 3 levels: core/Ura/ocr.py -> core/Ura -> core -> root
+tessdata_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'tessdata')
 os.environ['TESSDATA_PREFIX'] = tessdata_dir
 
 # Load config and check debug mode
