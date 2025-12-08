@@ -50,6 +50,36 @@ if %MINOR% NEQ 11 (
 
 echo [OK] Python version is compatible
 
+REM Check Tesseract-OCR
+echo.
+echo Checking Tesseract-OCR...
+where tesseract >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] Tesseract-OCR not found, downloading installer...
+    set "TESS_URL=https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe"
+    set "TESS_EXE=%TEMP%\tesseract-ocr-w64-setup.exe"
+    powershell -Command "Invoke-WebRequest -Uri '%TESS_URL%' -OutFile '%TESS_EXE%'" || (
+        echo [ERROR] Failed to download Tesseract installer
+        pause
+        exit /b 1
+    )
+    echo [INFO] Running Tesseract installer (please wait)...
+    start /wait "" "%TESS_EXE%" || (
+        echo [ERROR] Tesseract installer failed
+        pause
+        exit /b 1
+    )
+)
+
+REM Ensure Tesseract is on PATH for this session (common install path)
+set "PATH=C:\Program Files\Tesseract-OCR;%PATH%"
+where tesseract >nul 2>&1
+if errorlevel 1 (
+    echo [WARNING] Tesseract still not found. If you installed to a custom path, add it to PATH manually.
+) else (
+    echo [OK] Tesseract-OCR is available
+)
+
 REM Check for Git
 echo.
 echo Checking Git installation...
