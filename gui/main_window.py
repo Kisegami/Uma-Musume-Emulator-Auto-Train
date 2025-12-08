@@ -163,27 +163,6 @@ class MainWindow:
     def get_default_config(self):
         """Get default configuration"""
         return {
-            "priority_stat": ["spd", "sta", "wit", "pwr", "guts"],
-            "minimum_mood": "GREAT",
-            "maximum_failure": 15,
-            "strategy": "PACE",
-
-            "retry_race": True,
-            "skill_point_cap": 400,
-            "skill_purchase": "auto",
-            "skill_file": "skills_example.json",
-            "enable_skill_point_check": True,
-            "min_energy": 30,
-            "min_score": 1.0,
-            "min_wit_score": 1.0,
-            "do_race_when_bad_training": True,
-            "stat_caps": {
-                "spd": 1100,
-                "sta": 1100,
-                "pwr": 600,
-                "guts": 600,
-                "wit": 600
-            },
             "capture_method": "adb",
             "adb_config": {
                 "device_address": "127.0.0.1:7555",
@@ -198,7 +177,60 @@ class MainWindow:
                 "display_id": 0,
                 "timeout": 1.0
             },
-            "debug_mode": False
+            "ldopengl_config": {
+                "ld_folder": "J:\\LDPlayer\\LDPlayer9",
+                "instance_id": 0,
+                "orientation": 0
+            },
+            "training": {
+                "priority_stat": ["spd", "sta", "wit", "pwr", "guts"],
+                "minimum_mood": "GREAT",
+                "maximum_failure": 15,
+                "min_energy": 30,
+                "min_score": {
+                    "spd": 1.0,
+                    "sta": 1.0,
+                    "pwr": 1.0,
+                    "guts": 1.0,
+                    "wit": 1.0
+                },
+                "do_race_when_bad_training": False,
+                "stat_caps": {
+                    "spd": 1100,
+                    "sta": 1100,
+                    "pwr": 600,
+                    "guts": 600,
+                    "wit": 600
+                }
+            },
+            "racing": {
+                "strategy": "FRONT",
+                "retry_race": True,
+                "allowed_grades": ["G1", "G2"],
+                "allowed_tracks": ["Turf"],
+                "allowed_distances": ["Medium", "Long"],
+                "do_custom_race": True,
+                "custom_race_file": "custom_races.json"
+            },
+            "skills": {
+                "skill_point_cap": 400,
+                "skill_purchase": "auto",
+                "skill_file": "skills_example.json",
+                "enable_skill_point_check": True
+            },
+            "restart_career": {
+                "restart_enabled": True,
+                "restart_times": 2,
+                "total_fans_requirement": 0
+            },
+            "auto_start_career": {
+                "include_guests_legacy": False,
+                "support_speciality": "STA",
+                "support_rarity": "SSR",
+                "auto_charge_tp": True
+            },
+            "debug_mode": False,
+            "stop_on_event_detection_failure": False
         }
     
     def save_config(self):

@@ -13,6 +13,7 @@ try:
     from .skill_tab import SkillTab
     from .restart_tab import RestartTab
     from .others_tab import OthersTab
+    from .update_tab import UpdateTab
     
     __all__ = [
         'MainTab',
@@ -21,7 +22,8 @@ try:
         'EventTab',
         'SkillTab',
         'RestartTab',
-        'OthersTab'
+        'OthersTab',
+        'UpdateTab'
     ]
     
 except ImportError as e:

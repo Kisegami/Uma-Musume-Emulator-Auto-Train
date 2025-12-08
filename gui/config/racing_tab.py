@@ -38,12 +38,13 @@ class RacingTab(BaseTab):
         racing_scroll.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         config = self.main_window.get_config()
+        racing_config = config.get('racing', {})
         
         # Racing Settings Frame
-        self._create_racing_settings_section(racing_scroll, config)
+        self._create_racing_settings_section(racing_scroll, racing_config)
         
         # Custom Race Settings
-        self._create_custom_race_section(racing_scroll, config)
+        self._create_custom_race_section(racing_scroll, racing_config)
         
         # Auto-save info label
         self.create_autosave_info_label(racing_scroll)
@@ -102,7 +103,7 @@ class RacingTab(BaseTab):
         strategy_frame = ctk.CTkFrame(racing_frame, fg_color="transparent")
         strategy_frame.pack(fill=tk.X, padx=15, pady=10)
         ctk.CTkLabel(strategy_frame, text="Strategy:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.strategy_var = tk.StringVar(value=config.get('strategy', 'PACE'))
+        self.strategy_var = tk.StringVar(value=config.get('strategy', 'FRONT'))
         self.strategy_var.trace('w', self.on_racing_setting_change)
         strategy_combo = ctk.CTkOptionMenu(strategy_frame, values=['FRONT', 'PACE', 'LATE', 'END'], 
                                           variable=self.strategy_var, fg_color=self.colors['accent_blue'], 
@@ -128,7 +129,7 @@ class RacingTab(BaseTab):
         custom_toggle_frame.pack(fill=tk.X, padx=10, pady=5)
         inner_toggle = ctk.CTkFrame(custom_toggle_frame, fg_color="transparent")
         inner_toggle.pack(fill=tk.X, padx=15, pady=5)
-        self.do_custom_race_var = tk.BooleanVar(value=config.get('do_custom_race', False))
+        self.do_custom_race_var = tk.BooleanVar(value=config.get('do_custom_race', True))
         self.do_custom_race_var.trace('w', self.on_racing_setting_change)
         ctk.CTkCheckBox(inner_toggle, text="Do Custom Races", variable=self.do_custom_race_var, 
                        text_color=self.colors['text_light'], font=get_font('checkbox'), 
@@ -156,16 +157,20 @@ class RacingTab(BaseTab):
         """Save racing settings to config"""
         try:
             config = self.main_window.get_config()
+            
+            # Ensure racing section exists
+            if 'racing' not in config:
+                config['racing'] = {}
 
-            config['strategy'] = self.strategy_var.get()
-            config['retry_race'] = self.retry_race_var.get()
+            config['racing']['strategy'] = self.strategy_var.get()
+            config['racing']['retry_race'] = self.retry_race_var.get()
             # Allowed multi-selects
-            config['allowed_grades'] = [g for g, v in self.allowed_grades_vars.items() if v.get()]
-            config['allowed_tracks'] = [t for t, v in self.allowed_tracks_vars.items() if v.get()]
-            config['allowed_distances'] = [d for d, v in self.allowed_distances_vars.items() if v.get()]
+            config['racing']['allowed_grades'] = [g for g, v in self.allowed_grades_vars.items() if v.get()]
+            config['racing']['allowed_tracks'] = [t for t, v in self.allowed_tracks_vars.items() if v.get()]
+            config['racing']['allowed_distances'] = [d for d, v in self.allowed_distances_vars.items() if v.get()]
             # Custom races
-            config['do_custom_race'] = self.do_custom_race_var.get()
-            config['custom_race_file'] = self.custom_race_file_var.get()
+            config['racing']['do_custom_race'] = self.do_custom_race_var.get()
+            config['racing']['custom_race_file'] = self.custom_race_file_var.get()
             
             self.main_window.set_config(config)
             messagebox.showinfo("Success", "Racing settings saved successfully!")
@@ -183,15 +188,19 @@ class RacingTab(BaseTab):
     
     def update_config(self, config):
         """Update the config dictionary with current values"""
-        config['strategy'] = self.strategy_var.get()
-        config['retry_race'] = self.retry_race_var.get()
+        # Ensure racing section exists
+        if 'racing' not in config:
+            config['racing'] = {}
+        
+        config['racing']['strategy'] = self.strategy_var.get()
+        config['racing']['retry_race'] = self.retry_race_var.get()
         # Allowed multi-selects
-        config['allowed_grades'] = [g for g, v in self.allowed_grades_vars.items() if v.get()]
-        config['allowed_tracks'] = [t for t, v in self.allowed_tracks_vars.items() if v.get()]
-        config['allowed_distances'] = [d for d, v in self.allowed_distances_vars.items() if v.get()]
+        config['racing']['allowed_grades'] = [g for g, v in self.allowed_grades_vars.items() if v.get()]
+        config['racing']['allowed_tracks'] = [t for t, v in self.allowed_tracks_vars.items() if v.get()]
+        config['racing']['allowed_distances'] = [d for d, v in self.allowed_distances_vars.items() if v.get()]
         # Custom races
-        config['do_custom_race'] = self.do_custom_race_var.get()
-        config['custom_race_file'] = self.custom_race_file_var.get()
+        config['racing']['do_custom_race'] = self.do_custom_race_var.get()
+        config['racing']['custom_race_file'] = self.custom_race_file_var.get()
     
     def on_racing_setting_change(self, *args):
         """Called when any racing setting variable changes - auto-save"""

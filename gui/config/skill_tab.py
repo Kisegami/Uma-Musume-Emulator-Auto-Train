@@ -30,6 +30,7 @@ class SkillTab(BaseTab):
         skill_tab = self.tabview.add("Skill")
         
         config = self.main_window.get_config()
+        skills_config = config.get('skills', {})
         
         # Fixed header section (always visible)
         header_frame, _ = self.create_section_frame(skill_tab, "Skill Management", 
@@ -38,7 +39,7 @@ class SkillTab(BaseTab):
         # Enable Skill Point Check
         enable_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
         enable_frame.pack(fill=tk.X, padx=15, pady=5)
-        self.enable_skill_check_var = tk.BooleanVar(value=config.get('enable_skill_point_check', True))
+        self.enable_skill_check_var = tk.BooleanVar(value=skills_config.get('enable_skill_point_check', True))
         self.enable_skill_check_var.trace('w', self.on_skill_setting_change)
         enable_checkbox = ctk.CTkCheckBox(enable_frame, text="Enable Skill Point check and Skill Purchase", 
                                         variable=self.enable_skill_check_var, text_color=self.colors['text_light'],
@@ -55,14 +56,16 @@ class SkillTab(BaseTab):
         if self.enable_skill_check_var.get():
             self.skill_settings_container.pack(fill=tk.X, pady=5)
         
+        skills_config = config.get('skills', {})
+        
         # Skill Point Cap
-        self.skill_point_cap_var = tk.IntVar(value=config.get('skill_point_cap', 400))
+        self.skill_point_cap_var = tk.IntVar(value=skills_config.get('skill_point_cap', 400))
         self.add_variable_with_autosave('skill_point_cap', self.skill_point_cap_var)
         _, cap_entry = self.create_setting_row(self.skill_settings_container, "Skill Point Cap:", 'entry', 
                                               textvariable=self.skill_point_cap_var, width=100)
         
         # Skill Purchase Mode
-        self.skill_purchase_var = tk.StringVar(value=config.get('skill_purchase', 'auto'))
+        self.skill_purchase_var = tk.StringVar(value=skills_config.get('skill_purchase', 'auto'))
         self.add_variable_with_autosave('skill_purchase', self.skill_purchase_var)
         _, mode_combo = self.create_setting_row(self.skill_settings_container, "Skill Purchase Mode:", 'optionmenu', 
                                                values=['auto', 'manual'], 
@@ -85,7 +88,7 @@ class SkillTab(BaseTab):
         file_container = ctk.CTkFrame(template_frame, fg_color="transparent")
         file_container.pack(side=tk.RIGHT)
         
-        self.skill_file_var = tk.StringVar(value=config.get('skill_file', 'skills_example.json'))
+        self.skill_file_var = tk.StringVar(value=skills_config.get('skill_file', 'skills_example.json'))
         self.skill_file_var.trace('w', self.on_skill_setting_change)
         ctk.CTkEntry(file_container, textvariable=self.skill_file_var, width=150, corner_radius=8).pack(side=tk.LEFT, padx=(0, 5))
         
@@ -130,10 +133,15 @@ class SkillTab(BaseTab):
         """Save skill settings to config"""
         try:
             config = self.main_window.get_config()
-            config['enable_skill_point_check'] = self.enable_skill_check_var.get()
-            config['skill_point_cap'] = self.skill_point_cap_var.get()
-            config['skill_purchase'] = self.skill_purchase_var.get()
-            config['skill_file'] = self.skill_file_var.get()
+            
+            # Ensure skills section exists
+            if 'skills' not in config:
+                config['skills'] = {}
+            
+            config['skills']['enable_skill_point_check'] = self.enable_skill_check_var.get()
+            config['skills']['skill_point_cap'] = self.skill_point_cap_var.get()
+            config['skills']['skill_purchase'] = self.skill_purchase_var.get()
+            config['skills']['skill_file'] = self.skill_file_var.get()
             
             self.main_window.set_config(config)
             messagebox.showinfo("Success", "Skill settings saved successfully!")
@@ -143,10 +151,14 @@ class SkillTab(BaseTab):
     
     def update_config(self, config):
         """Update the config dictionary with current values"""
-        config['enable_skill_point_check'] = self.enable_skill_check_var.get()
-        config['skill_point_cap'] = self.skill_point_cap_var.get()
-        config['skill_purchase'] = self.skill_purchase_var.get()
-        config['skill_file'] = self.skill_file_var.get()
+        # Ensure skills section exists
+        if 'skills' not in config:
+            config['skills'] = {}
+        
+        config['skills']['enable_skill_point_check'] = self.enable_skill_check_var.get()
+        config['skills']['skill_point_cap'] = self.skill_point_cap_var.get()
+        config['skills']['skill_purchase'] = self.skill_purchase_var.get()
+        config['skills']['skill_file'] = self.skill_file_var.get()
     
     def on_skill_setting_change(self, *args):
         """Called when any skill setting variable changes - auto-save"""

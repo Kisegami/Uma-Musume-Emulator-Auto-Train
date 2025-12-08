@@ -1,230 +1,186 @@
-#!/usr/bin/env python3
-from utils.log import log_info, log_warning, log_error, log_debug, log_success
 """
-ADB Setup Helper Script
-This script helps you configure ADB connection settings
+Setup script for Uma Musume Auto-Train Bot
+Checks system requirements and installs dependencies
 """
-
-import subprocess
-import json
-import os
 import sys
+import os
+import subprocess
+import platform
+from pathlib import Path
 
-def load_config():
-    """Load current configuration"""
-    try:
-        with open('config.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("config.json not found! Please make sure you're in the project directory.")
-        return {}
-    except json.JSONDecodeError:
-        print("Error reading config.json! Please check the file format.")
-        return {}
+def print_header(text):
+    """Print a formatted header"""
+    print("\n" + "=" * 60)
+    print(f"  {text}")
+    print("=" * 60)
 
-def save_config(config):
-    """Save configuration to file"""
-    try:
-        with open('config.json', 'w') as f:
-            json.dump(config, f, indent=2)
-        print("✓ Configuration saved successfully!")
-        return True
-    except Exception as e:
-        print("✗ Error saving configuration: " + str(e))
-        return False
+def print_success(text):
+    """Print success message"""
+    print(f"✓ {text}")
 
-def check_adb_installation():
-    """Check if ADB is installed"""
-    try:
-        result = subprocess.run(['adb', 'version'], capture_output=True, text=True, check=True)
-        print("✓ ADB found: " + result.stdout.split('\n')[0])
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("✗ ADB not found!")
-        print("Please install Android SDK and add ADB to your PATH")
-        print("Download from: https://developer.android.com/studio/releases/platform-tools")
-        return False
+def print_error(text):
+    """Print error message"""
+    print(f"✗ {text}")
 
-def list_available_devices():
-    """List all available ADB devices"""
-    try:
-        result = subprocess.run(['adb', 'devices'], capture_output=True, text=True, check=True)
-        lines = result.stdout.strip().split('\n')[1:]  # Skip header
-        devices = []
-        
-        for line in lines:
-            if line.strip() and '\tdevice' in line:
-                device_id = line.split('\t')[0]
-                devices.append(device_id)
-        
-        return devices
-    except Exception as e:
-        print("Error listing devices: " + str(e))
-        return []
+def print_warning(text):
+    """Print warning message"""
+    print(f"⚠ {text}")
 
-def get_device_info(device_id):
-    """Get information about a specific device"""
-    try:
-        # Get device model
-        model_result = subprocess.run(['adb', '-s', device_id, 'shell', 'getprop', 'ro.product.model'], 
-                                    capture_output=True, text=True, check=True)
-        model = model_result.stdout.strip()
-        
-        # Get Android version
-        version_result = subprocess.run(['adb', '-s', device_id, 'shell', 'getprop', 'ro.build.version.release'], 
-                                      capture_output=True, text=True, check=True)
-        version = version_result.stdout.strip()
-        
-        # Get screen size
-        size_result = subprocess.run(['adb', '-s', device_id, 'shell', 'wm', 'size'], 
-                                   capture_output=True, text=True, check=True)
-        size_str = size_result.stdout.strip().split(': ')[1]
-        
-        return {
-            'model': model,
-            'version': version,
-            'screen_size': size_str
-        }
-    except Exception as e:
-        print("Error getting device info: " + str(e))
-        return {}
+def print_info(text):
+    """Print info message"""
+    print(f"  {text}")
 
-def setup_adb_config():
-    """Interactive ADB configuration setup"""
-    print("ADB Configuration Setup")
-    print("=" * 40)
+# Note: Python version, Git, and requirements.txt checks are done by setup.bat
+# This script only handles things that batch scripts can't do easily
+
+def install_dependencies():
+    """Install Python dependencies from requirements.txt"""
+    print_header("Installing Dependencies")
     
-    # Check ADB installation
-    if not check_adb_installation():
+    if not os.path.exists('requirements.txt'):
+        print_error("requirements.txt not found")
         return False
     
-    # Load current config
-    config = load_config()
-    if not config:
-        return False
+    print_info("Installing packages from requirements.txt...")
+    print_info("This may take a few minutes...")
     
-    # Initialize adb_config if not present
-    if 'adb_config' not in config:
-        config['adb_config'] = {}
-    
-    adb_config = config['adb_config']
-    
-    print("\nCurrent ADB Configuration:")
-    print("  Device Address: " + adb_config.get('device_address', 'Not set'))
-    print("  ADB Path: " + adb_config.get('adb_path', 'adb'))
-    print("  Input Delay: " + str(adb_config.get('input_delay', 0.5)) + "s")
-    print("  Screenshot Timeout: " + str(adb_config.get('screenshot_timeout', 5)) + "s")
-    
-    # List available devices
-    print("\nAvailable ADB Devices:")
-    devices = list_available_devices()
-    
-    if not devices:
-        print("  No devices found!")
-        print("\nTo connect a device:")
-        print("1. Enable USB debugging on your Android device")
-        print("2. Connect via USB or start an emulator")
-        print("3. Run 'adb devices' to verify connection")
-        print("4. Run this script again")
-        return False
-    
-    for i, device in enumerate(devices, 1):
-        print(f"  {i}. {device}")
-        device_info = get_device_info(device)
-        if device_info:
-            print(f"     Model: {device_info.get('model', 'Unknown')}")
-            print(f"     Android: {device_info.get('version', 'Unknown')}")
-            print(f"     Screen: {device_info.get('screen_size', 'Unknown')}")
-    
-    # Device selection
-    print("\nDevice Selection:")
-    print("1. Use first available device")
-    print("2. Specify device address manually")
-    print("3. Skip device configuration")
-    
-    choice = input("\nEnter your choice (1-3): ").strip()
-    
-    if choice == '1':
-        if devices:
-            adb_config['device_address'] = devices[0]
-            print("✓ Using device: " + devices[0])
+    try:
+        # Use pip to install requirements
+        result = subprocess.run(
+            [sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'],
+            capture_output=False,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print_success("All dependencies installed successfully")
+            return True
         else:
-            print("✗ No devices available")
+            print_error("Failed to install some dependencies")
+            print_info("Try running manually: pip install -r requirements.txt")
             return False
-    elif choice == '2':
-        device_address = input("Enter device address (e.g., 127.0.0.1:5555): ").strip()
-        if device_address:
-            adb_config['device_address'] = device_address
-            print("✓ Device address set to: " + device_address)
-        else:
-            print("✗ Invalid device address")
-            return False
-    elif choice == '3':
-        print("Skipping device configuration")
-    else:
-        print("✗ Invalid choice")
+            
+    except Exception as e:
+        print_error(f"Error installing dependencies: {e}")
         return False
-    
-    # ADB path configuration
-    print("\nADB Path Configuration:")
-    print("Current ADB path: " + adb_config.get('adb_path', 'adb'))
-    
-    custom_path = input("Enter custom ADB path (or press Enter to use default): ").strip()
-    if custom_path:
-        adb_config['adb_path'] = custom_path
-        print("✓ ADB path set to: " + custom_path)
-    
-    # Timing configuration
-    print("\nTiming Configuration:")
+
+def check_adbutils():
+    """Check if adbutils is installed and working"""
+    print_header("Checking ADB (via adbutils)")
     
     try:
-        input_delay = float(input(f"Input delay in seconds (current: {adb_config.get('input_delay', 0.5)}): ") or adb_config.get('input_delay', 0.5))
-        adb_config['input_delay'] = input_delay
-        print("✓ Input delay set to: " + str(input_delay) + "s")
-    except ValueError:
-        print("✗ Invalid input delay value")
-        return False
-    
-    try:
-        screenshot_timeout = int(input(f"Screenshot timeout in seconds (current: {adb_config.get('screenshot_timeout', 5)}): ") or adb_config.get('screenshot_timeout', 5))
-        adb_config['screenshot_timeout'] = screenshot_timeout
-        print("✓ Screenshot timeout set to: " + str(screenshot_timeout) + "s")
-    except ValueError:
-        print("✗ Invalid screenshot timeout value")
-        return False
-    
-    # Save configuration
-    print("\nSaving configuration...")
-    if save_config(config):
-        print("\n✓ ADB configuration completed successfully!")
-        print("\nNext steps:")
-        print("1. Run: python test_adb_setup.py")
-        print("2. Adjust regions in utils/constants_phone.py")
-        print("3. Run: python main.py")
+        import adbutils
+        print_success(f"adbutils is installed (version: {getattr(adbutils, '__version__', 'unknown')})")
+        
+        # Check for bundled ADB
+        import site
+        site_packages = site.getsitepackages()
+        
+        adb_found = False
+        for site_pkg in site_packages:
+            adb_path = Path(site_pkg) / 'adbutils' / 'binaries' / 'adb.exe'
+            if adb_path.exists():
+                print_success(f"Bundled ADB found: {adb_path}")
+                adb_found = True
+                break
+        
+        if not adb_found:
+            # Check relative to Python executable
+            python_dir = Path(sys.executable).parent
+            adb_path = python_dir / 'Lib' / 'site-packages' / 'adbutils' / 'binaries' / 'adb.exe'
+            if adb_path.exists():
+                print_success(f"Bundled ADB found: {adb_path}")
+                adb_found = True
+        
+        if not adb_found:
+            print_warning("ADB binary not found in adbutils")
+            print_info("This might be normal - adbutils should include it")
+        
         return True
-    else:
+        
+    except ImportError:
+        print_error("adbutils is not installed")
+        print_info("It should be installed from requirements.txt")
         return False
+
+def check_config_files():
+    """Check if config files exist, create from examples if needed"""
+    print_header("Checking Configuration Files")
+    
+    config_files = {
+        'config.json': 'config.example.json',
+        'event_priority.json': 'event_priority.example.json',
+        'training_score.json': 'training_score.example.json',
+    }
+    
+    created = []
+    for config_file, example_file in config_files.items():
+        if os.path.exists(config_file):
+            print_success(f"{config_file} exists")
+        elif os.path.exists(example_file):
+            try:
+                import shutil
+                shutil.copy(example_file, config_file)
+                print_success(f"Created {config_file} from {example_file}")
+                created.append(config_file)
+            except Exception as e:
+                print_error(f"Failed to create {config_file}: {e}")
+        else:
+            print_warning(f"{config_file} not found and no example file available")
+    
+    return len(created) > 0
 
 def main():
-    """Main function"""
-    if len(sys.argv) > 1 and sys.argv[1] == '--help':
-        print("ADB Setup Helper Script")
-        print("\nUsage:")
-        print("  python setup.py          # Interactive setup")
-        print("  python setup.py --help   # Show this help")
-        print("\nThis script helps you configure ADB connection settings")
-        print("for the Uma Auto Train project.")
-        return
+    """Main setup function (called by setup.bat)
     
+    Note: setup.bat handles:
+    - Python version check (3.11.x)
+    - Git check (bundled or system)
+    - requirements.txt existence check
+    
+    This script only handles things batch can't do:
+    - Installing Python dependencies
+    - Checking adbutils installation
+    - Creating config files
+    """
+    print_header("Installing Dependencies and Checking Setup")
+    
+    all_checks_passed = True
+    
+    # Install dependencies (batch can't do pip install easily)
+    if not install_dependencies():
+        all_checks_passed = False
+        print_warning("Some dependencies may not be installed correctly")
+    
+    # Check adbutils (requires Python imports)
+    check_adbutils()
+    
+    # Check config files (requires file operations)
+    check_config_files()
+    
+    # Summary
+    print_header("Setup Summary")
+    
+    if all_checks_passed:
+        print_success("Setup completed successfully!")
+        return True
+    else:
+        print_warning("Setup completed with some issues")
+        print_info("Please review the messages above and fix any errors")
+        return False
+
+if __name__ == '__main__':
+    # This script is designed to be called by setup.bat on Windows
+    # It can be run standalone, but setup.bat is the recommended way
     try:
-        success = setup_adb_config()
+        success = main()
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
-        print("\nSetup cancelled by user.")
+        print("\n\nSetup interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print("Setup error: " + str(e))
+        print(f"\n\nSetup failed with error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
-if __name__ == "__main__":
-    main() 

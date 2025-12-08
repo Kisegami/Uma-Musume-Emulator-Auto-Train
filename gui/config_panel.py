@@ -44,9 +44,9 @@ class ConfigPanel(ctk.CTkFrame):
     def _load_modular_tabs(self):
         """Load all configuration tabs from modules"""
         try:
-            from .config import MainTab, TrainingTab, RacingTab, EventTab, SkillTab, RestartTab, OthersTab
+            from .config import MainTab, TrainingTab, RacingTab, EventTab, SkillTab, RestartTab, OthersTab, UpdateTab
             
-            # Initialize all tabs
+            # Initialize all tabs (order matters - tabs appear in this order)
             self._tabs = {
                 'main': MainTab(self.tabview, self, self.colors),
                 'training': TrainingTab(self.tabview, self, self.colors),
@@ -54,6 +54,7 @@ class ConfigPanel(ctk.CTkFrame):
                 'event': EventTab(self.tabview, self, self.colors),
                 'skill': SkillTab(self.tabview, self, self.colors),
                 'restart': RestartTab(self.tabview, self, self.colors),
+                'update': UpdateTab(self.tabview, self, self.colors),
                 'others': OthersTab(self.tabview, self, self.colors),
             }
             
@@ -105,7 +106,7 @@ class ConfigPanel(ctk.CTkFrame):
                     'connection_timeout': self.connection_timeout_var.get()
                 }
 
-                # Capture method & nemu settings
+                # Capture method & settings
                 config['capture_method'] = self.capture_method_var.get()
                 config['nemu_ipc_config'] = {
                     'nemu_folder': self.nemu_folder_var.get(),
@@ -113,6 +114,12 @@ class ConfigPanel(ctk.CTkFrame):
                     'display_id': self.nemu_display_var.get(),
                     'timeout': self.nemu_timeout_var.get()
                 }
+                if hasattr(self, 'ldopengl_folder_var'):
+                    config['ldopengl_config'] = {
+                        'ld_folder': self.ldopengl_folder_var.get(),
+                        'instance_id': self.ldopengl_instance_var.get(),
+                        'orientation': self.ldopengl_orientation_var.get()
+                    }
             
             # Debug mode (from others tab)
             if hasattr(self, 'debug_mode_var'):
@@ -125,11 +132,25 @@ class ConfigPanel(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save configuration: {e}")
 
+    def toggle_capture_settings(self):
+        """Show/hide capture method settings based on selected method"""
+        if not hasattr(self, 'capture_method_var'):
+            return
+        
+        method = self.capture_method_var.get()
+        
+        # Hide all settings frames first
+        if hasattr(self, 'nemu_settings_frame'):
+            self.nemu_settings_frame.pack_forget()
+        if hasattr(self, 'ldopengl_settings_frame'):
+            self.ldopengl_settings_frame.pack_forget()
+        
+        # Show appropriate settings frame
+        if method == 'nemu_ipc' and hasattr(self, 'nemu_settings_frame'):
+            self.nemu_settings_frame.pack(fill=tk.X, pady=(0, 10), padx=10)
+        elif method == 'ldopengl' and hasattr(self, 'ldopengl_settings_frame'):
+            self.ldopengl_settings_frame.pack(fill=tk.X, pady=(0, 10), padx=10)
+    
     def toggle_nemu_settings(self):
-        """Show/hide Nemu IPC settings based on method"""
-        if hasattr(self, 'capture_method_var') and hasattr(self, 'nemu_settings_frame'):
-            method = self.capture_method_var.get()
-            if method == 'nemu_ipc':
-                self.nemu_settings_frame.pack(fill=tk.X, pady=(0, 10), padx=10)
-            else:
-                self.nemu_settings_frame.pack_forget()
+        """Legacy method name - redirects to toggle_capture_settings"""
+        self.toggle_capture_settings()

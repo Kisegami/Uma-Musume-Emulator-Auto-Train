@@ -209,20 +209,32 @@ class RestartTab(BaseTab):
     
     def update_config(self, config):
         """Update the config dictionary with current values"""
+        # Ensure restart_career section exists
+        if 'restart_career' not in config:
+            config['restart_career'] = {}
+        
         # Update restart career settings
-        config['restart_career'] = {
-            'restart_enabled': self.restart_enabled_var.get(),
-            'restart_criteria': self.restart_criteria_var.get(),
-            'restart_times': self.restart_times_var.get(),
-            'total_fans_requirement': self.total_fans_requirement_var.get()
-        }
+        config['restart_career']['restart_enabled'] = self.restart_enabled_var.get()
+        # Update restart criteria based on radio button selection
+        if self.restart_criteria_var.get() == "times":
+            config['restart_career']['restart_times'] = self.restart_times_var.get()
+            config['restart_career']['total_fans_requirement'] = 0
+        else:  # fans
+            config['restart_career']['restart_times'] = 0
+            config['restart_career']['total_fans_requirement'] = self.total_fans_requirement_var.get()
+        
+        # Ensure auto_start_career section exists
+        if 'auto_start_career' not in config:
+            config['auto_start_career'] = {}
         
         # Update auto start career settings
-        config['auto_start_career'] = {
-            'include_guests_legacy': self.include_guests_legacy_var.get(),
-            'support_speciality': self.support_speciality_var.get(),
-            'support_rarity': self.support_rarity_var.get()
-        }
+        config['auto_start_career']['include_guests_legacy'] = self.include_guests_legacy_var.get()
+        config['auto_start_career']['support_speciality'] = self.support_speciality_var.get()
+        config['auto_start_career']['support_rarity'] = self.support_rarity_var.get()
+        # Note: auto_charge_tp is not currently in the GUI, but preserve it if it exists in the original config
+        original_config = self.main_window.get_config()
+        if 'auto_start_career' in original_config and 'auto_charge_tp' in original_config['auto_start_career']:
+            config['auto_start_career']['auto_charge_tp'] = original_config['auto_start_career']['auto_charge_tp']
     
     def on_restart_setting_change(self, *args):
         """Called when any restart setting variable changes - auto-save"""
