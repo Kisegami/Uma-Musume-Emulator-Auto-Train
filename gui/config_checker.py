@@ -22,7 +22,9 @@ class ConfigChecker:
             "config.json": "config.example.json",
             "event_priority.json": "event_priority.example.json", 
             "training_score.json": "training_score.example.json",
-            "training_score_unity.json": "training_score_unity.example.json"
+            "training_score_unity.json": "training_score_unity.example.json",
+            "custom_races.json": "custom_races.example.json",
+            "skills.json": "skills.example.json"
         }
     
     def deep_merge(self, existing_dict, example_dict):

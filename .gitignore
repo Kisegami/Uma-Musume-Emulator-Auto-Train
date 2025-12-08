@@ -52,3 +52,5 @@ build/
 build_*.bat
 launcher_*.py
 toolkit/
+launcher.exe
+_internal/
