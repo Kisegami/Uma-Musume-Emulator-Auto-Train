@@ -42,9 +42,16 @@ Right now **UMAT** support 2 senario: **URA Finales** and **Unity Cup**
 3. **Enable ADB debugging** in emulator settings
 4. **Install Uma Musume** in the emulator
 
-#### 5. Run setup.bat from UMAT Folder
+#### 5. Install Python Dependencies
 
-#### 6. Run Lanch.bat to start the GUI
+Run `install_dependencies.bat` from the UMAT folder to install all required Python packages.
+
+Alternatively, you can manually install dependencies using:
+```
+toolkit\python\python.exe -m pip install -r requirements.txt
+```
+
+#### 6. Run Launch.bat to start the GUI
 
 ## Configs
 Refer to [Config Guide](https://github.com/Kisegami/Uma-Musume-Emulator-Auto-Train/wiki/Config-Guide-%5BEN%5D)

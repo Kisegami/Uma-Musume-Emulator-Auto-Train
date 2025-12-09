@@ -110,11 +110,30 @@ class BotController:
             self.main_window.add_log("Checking ADB connection...", "info")
             
             # Check if main script exists
-            if os.path.exists('main.py'):
+            # Get project root directory (where main.py should be)
+            # bot_controller.py is in gui/ folder, so go up one level to get project root
+            try:
+                # Get the directory containing this file (gui/), then go up one level
+                current_file = os.path.abspath(__file__)
+                gui_dir = os.path.dirname(current_file)
+                project_root = os.path.dirname(gui_dir)
+            except:
+                # Fallback to current working directory
+                project_root = os.getcwd()
+            main_script = os.path.join(project_root, 'main.py')
+            
+            if os.path.exists(main_script):
                 self.main_window.add_log("Found main.py, starting automation...", "info")
                 
                 try:
                     # Run the main ADB bot in a subprocess with unbuffered output
+                    # Set cwd to project root so Python can find utils/ and other modules
+                    env = os.environ.copy()
+                    pythonpath = project_root
+                    if "PYTHONPATH" in env:
+                        pythonpath = pythonpath + os.pathsep + env["PYTHONPATH"]
+                    env["PYTHONPATH"] = pythonpath
+                    
                     self.bot_process = subprocess.Popen(
                         [sys.executable, '-u', 'main.py'],  # -u for unbuffered output
                         stdout=subprocess.PIPE,
@@ -123,7 +142,9 @@ class BotController:
                         bufsize=0,  # Unbuffered
                         universal_newlines=True,
                         encoding='utf-8',  # Explicitly set UTF-8 encoding
-                        errors='replace'   # Replace problematic characters instead of failing
+                        errors='replace',   # Replace problematic characters instead of failing
+                        cwd=project_root,  # Set working directory to project root
+                        env=env  # Set PYTHONPATH
                     )
                     
                     self.main_window.add_log("Bot process started successfully", "success")

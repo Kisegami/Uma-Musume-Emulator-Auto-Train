@@ -1,8 +1,19 @@
 import time
 import subprocess
 import sys
-from utils.log import log_info, log_warning, log_error, log_success
 import os
+
+# Add script's directory to Python path (for embeddable Python compatibility)
+# This ensures utils/ and other modules can be found regardless of how Python is invoked
+if '__file__' in globals():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+else:
+    # Fallback: use current working directory or sys.argv[0] if available
+    script_dir = os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv else os.getcwd()
+if script_dir and script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+from utils.log import log_info, log_warning, log_error, log_success
 
 # Fix Windows console encoding for Unicode support
 if os.name == 'nt':  # Windows
