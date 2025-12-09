@@ -30,6 +30,7 @@ class MainWindow:
         self.root.title("Uma Musume Auto-Train Bot")
         self.root.geometry("1400x900")
         self.root.minsize(1200, 800)
+        self.set_app_icon()
 
         # Set customtkinter appearance mode and color theme
         ctk.set_appearance_mode("dark")  # "dark" or "light"
@@ -319,6 +320,30 @@ class MainWindow:
             self.config[parent_key] = {}
         self.config[parent_key][child_key] = value
         self.schedule_auto_save()
+
+    def set_app_icon(self):
+        """Attempt to set a custom window icon if provided"""
+        # Look for user-provided icon files under assets/icons
+        gui_dir = os.path.normpath(os.path.dirname(__file__))
+        base_dir = os.path.normpath(os.path.join(gui_dir, ".."))
+        icon_candidates = [
+            os.path.join(gui_dir, "app.ico"),  # allow drop-in next to main_window
+            os.path.join(gui_dir, "app.png"),
+        ]
+
+        for icon_path in icon_candidates:
+            if not os.path.exists(icon_path):
+                continue
+            try:
+                if icon_path.lower().endswith(".ico"):
+                    self.root.iconbitmap(icon_path)
+                else:
+                    # Keep a reference so the image is not garbage-collected
+                    self._icon_image_ref = tk.PhotoImage(file=icon_path)
+                    self.root.iconphoto(False, self._icon_image_ref)
+                break
+            except Exception as e:
+                print(f"Warning: Could not set app icon: {e}")
 
 def main():
     """Main function to run the modern GUI"""

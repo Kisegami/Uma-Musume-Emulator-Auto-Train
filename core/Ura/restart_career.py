@@ -11,7 +11,10 @@ import time
 from typing import Dict, Any, Optional, Tuple
 
 # Add the project root to the path so we can import our modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+SUPPORTS_DIR = os.path.join(PROJECT_ROOT, "supports")
+os.makedirs(SUPPORTS_DIR, exist_ok=True)
 
 from utils.recognizer import match_template
 from utils.screenshot import take_screenshot
@@ -94,11 +97,11 @@ def execute_skill_purchase_workflow(available_points: int):
     log_info(f"=== Auto Skill Purchase Workflow ===")
     
     # Import here to avoid circular imports
-    from core.skill_auto_purchase import click_image_button
-    from core.skill_recognizer import scan_all_skills_with_scroll
-    from core.skill_purchase_optimizer import load_skill_config, create_purchase_plan, filter_affordable_skills
-    from core.skill_auto_purchase import execute_skill_purchases
-    from core.skill_recognizer import deduplicate_skills
+    from core.Ura.skill_auto_purchase import click_image_button
+    from core.Ura.skill_recognizer import scan_all_skills_with_scroll
+    from core.Ura.skill_purchase_optimizer import load_skill_config, create_purchase_plan, filter_affordable_skills
+    from core.Ura.skill_auto_purchase import execute_skill_purchases
+    from core.Ura.skill_recognizer import deduplicate_skills
     
     # Tap end skill button
     if not click_image_button("assets/buttons/end_skill.png", "end skill button", max_attempts=5):
@@ -233,62 +236,30 @@ def filter_support():
     
     config = load_config()
     auto_start_career = config.get('auto_start_career', {})
-    support_speciality = auto_start_career.get('support_speciality', 'SPEED')
-    support_rarity = auto_start_career.get('support_rarity', 'SSR')
-    
-    # Tap filter button
-    tap(696, 1621)
-    time.sleep(0.5)
-    
-    # Tap additional filter coordinate
-    tap(774, 206)
-    time.sleep(0.5)
 
-    # Reset filter
-    screenshot = take_screenshot()
-    reset_filter_matches = match_template(screenshot, "assets/buttons/reset_filter.png", confidence=0.8)
-    if reset_filter_matches:
-        x, y, w, h = reset_filter_matches[0]
-        center = (x + w//2, y + h//2)
-        tap(center[0], center[1])
-        time.sleep(0.5)
-    
-    # Set support speciality
-    support_speciality_coords = {
-        "SPD": (102, 627),
-        "STA": (444, 623),
-        "PWR": (786, 618),
-        "GUTS": (109, 741),
-        "WIT": (442, 732),
-        "PAL": (777, 731),
-    }
-    
-    if support_speciality in support_speciality_coords:
-        x, y = support_speciality_coords[support_speciality]
-        tap(x, y)
-        time.sleep(0.5)
-    
-    # Set support rarity
-    support_rarity_coords = {
-        "R": (102, 408),
-        "SR": (437, 414),
-        "SSR": (777, 410),
-    }
-    
-    if support_rarity in support_rarity_coords:
-        x, y = support_rarity_coords[support_rarity]
-        tap(x, y)
-        time.sleep(0.5)
-    
-    # OK button after filter selection
-    ok_matches = match_template(screenshot, "assets/buttons/ok_btn.png", confidence=0.6)
-    if ok_matches:
-        x, y, w, h = ok_matches[0]
-        center = (x + w//2, y + h//2)
-        tap(center[0], center[1])
-        time.sleep(0.5)
-    
-    # Select first following card
+    # Use template selection when enabled
+    use_templates = auto_start_career.get('use_support_templates', False)
+    template_name = auto_start_career.get('support_template_name', '')
+    log_info(f"Support template toggle: {use_templates}, template name: '{template_name}'")
+    if use_templates:
+        template_path = os.path.join(SUPPORTS_DIR, template_name) if template_name else None
+        if template_path and os.path.exists(template_path):
+            log_info(f"Support template mode ON -> using '{template_name}' at '{template_path}'")
+            screenshot = take_screenshot()
+            matches = match_template(screenshot, template_path, confidence=0.7)
+            log_info(f"Template matches found: {len(matches) if matches else 0}")
+            if matches:
+                x, y, w, h = matches[0]
+                center = (x + w//2, y + h//2)
+                tap(center[0], center[1])
+                time.sleep(0.5)
+                return
+            else:
+                log_warning("Support template enabled but no match found on screen; falling back to following card.")
+        else:
+            log_warning("Support template enabled but template file missing or not set; falling back to following card.")
+
+    # Fallback: select first following card
     time.sleep(1)
     screenshot = take_screenshot()
     following_matches = match_template(screenshot, "assets/icons/following.png", confidence=0.8)
@@ -372,33 +343,7 @@ def start_career() -> bool:
             else:
                 return False
         
-        # Step 3: Tap Auto Select
-        log_info(f"Auto Select...")
-        auto_select_matches = match_template(take_screenshot(), "assets/buttons/auto_select.png", confidence=0.8)
-        if auto_select_matches:
-            x, y, w, h = auto_select_matches[0]
-            center = (x + w//2, y + h//2)
-            tap(center[0], center[1])
-            time.sleep(1)
-        else:
-            return False
-        
-        # Step 4: Conditional check
-        if include_guests_legacy:
-            tap(420, 1030)
-            time.sleep(0.5)
-        
-        # Step 5: Tap OK button
-        ok_matches = match_template(take_screenshot(), "assets/buttons/ok_btn.png", confidence=0.6)
-        if ok_matches:
-            x, y, w, h = ok_matches[0]
-            center = (x + w//2, y + h//2)
-            tap(center[0], center[1])
-            time.sleep(0.5)
-        else:
-            return False
-        
-        # Step 6: Tap Next button
+        # Step 3: Tap Next button
         next_matches = match_template(take_screenshot(), "assets/buttons/next_btn.png", confidence=0.8)
         if next_matches:
             x, y, w, h = next_matches[0]
@@ -408,23 +353,23 @@ def start_career() -> bool:
         else:
             return False
         
-        # Step 7: Tap Friend Support Choose
+        # Step 4: Tap Friend Support Choose
         log_info(f"Friend Support...")
         friend_support_matches = match_template(take_screenshot(), "assets/buttons/Friend_support_choose.png", confidence=0.8)
         if friend_support_matches:
             x, y, w, h = friend_support_matches[0]
             center = (x + w//2, y + h//2)
             tap(center[0], center[1])
-            time.sleep(0.5)
+            time.sleep(1)
         else:
             return False
         
-        # Step 8: Filter support
+        # Step 5: Filter support
         log_info(f"Filtering...")
         filter_support()
         time.sleep(1)
         
-        # Step 9: Start Career 1
+        # Step 6: Start Career 1
         start_career_1_matches = match_template(take_screenshot(), "assets/buttons/start_career_1.png", confidence=0.8)
         if start_career_1_matches:
             x, y, w, h = start_career_1_matches[0]
@@ -434,7 +379,7 @@ def start_career() -> bool:
         else:
             return False
         
-        # Step 10: Start Career 2
+        # Step 7: Start Career 2
         start_career_2_matches = match_template(take_screenshot(), "assets/buttons/start_career_2.png", confidence=0.8)
         if start_career_2_matches:
             x, y, w, h = start_career_2_matches[0]
@@ -443,7 +388,7 @@ def start_career() -> bool:
         else:
             return False
         
-        # Step 11: Wait for skip button and double tap
+        # Step 8: Wait for skip button and double tap
         log_info(f"Skip button...")
         skip_matches = wait_for_image("assets/buttons/skip_btn.png", timeout=30, confidence=0.8)
         if skip_matches:
@@ -454,21 +399,21 @@ def start_career() -> bool:
         else:
             return False
         
-        # Step 12: Wait for confirm button
+        # Step 9: Wait for confirm button
         log_info(f"Confirm button...")
         confirm_matches = wait_for_image("assets/buttons/confirm.png", timeout=30, confidence=0.8)
         if not confirm_matches:
             return False
         
-        # Step 13: Tap coordinates
+        # Step 10: Tap coordinates
         tap(213, 939)
         time.sleep(0.5)
         
-        # Step 14: Skip check
+        # Step 11: Skip check
         skip_check()
         time.sleep(0.5)
         
-        # Step 15: Tap confirm
+        # Step 12: Tap confirm
         confirm_matches = match_template(take_screenshot(), "assets/buttons/confirm.png", confidence=0.8)
         if confirm_matches:
             x, y, w, h = confirm_matches[0]
@@ -477,7 +422,7 @@ def start_career() -> bool:
         else:
             return False
         
-        # Step 16: Wait for Tazuna hint
+        # Step 13: Wait for Tazuna hint
         tazuna_hint_matches = wait_for_image("assets/ui/tazuna_hint.png", timeout=60, confidence=0.8)
         if tazuna_hint_matches:
             log_info(f"Career start completed!")

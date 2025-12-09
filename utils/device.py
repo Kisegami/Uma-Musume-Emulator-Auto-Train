@@ -8,10 +8,25 @@ from utils.config_loader import load_config_section
 
 def _find_bundled_adb():
     """
-    Find bundled ADB from adbutils package.
+    Find bundled ADB with priority:
+    1. toolkit/ADB/ directory (extracted ADB binary)
+    2. adbutils package binaries
     Returns path to adb executable or None if not found.
     """
-    # Try to find adbutils binaries
+    # First, check toolkit/ADB/ directory (for lightweight releases)
+    script_dir = Path(__file__).parent.parent.parent  # Go up from utils/device.py to project root
+    toolkit_adb_paths = [
+        script_dir / 'toolkit' / 'ADB' / 'adb.exe',  # Windows
+        script_dir / 'toolkit' / 'ADB' / 'adb',      # Linux/Mac
+    ]
+    for adb_path in toolkit_adb_paths:
+        if adb_path.exists():
+            if sys.platform != 'win32' and not os.access(adb_path, os.X_OK):
+                continue
+            log_debug(f"Using bundled ADB from toolkit: {adb_path}")
+            return str(adb_path)
+    
+    # Try to find adbutils binaries (fallback for when dependencies are installed)
     try:
         import site
         site_packages = site.getsitepackages()

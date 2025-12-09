@@ -23,7 +23,7 @@ from utils.constants_unity import (
 )
 
 # Import ADB state and logic modules
-from core.Unity.state import check_turn, check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar, check_dating_available
+from core.Unity.state import check_mood, check_current_year, check_criteria, check_skill_points_cap, check_goal_name, check_current_stats, check_energy_bar, check_dating_available
 
 # Import event handling functions
 from core.Unity.event_handling import count_event_choices, load_event_priorities, analyze_event_options, handle_event_choice, click_event_choice
@@ -221,8 +221,6 @@ def career_lobby():
     # Use existing config loaded at module level
     training_config_section = config.get("training", {})
     MINIMUM_MOOD = training_config_section.get("minimum_mood", "GREAT")
-    # Track last day we attempted a custom race but failed, to avoid re-checking within same day
-    last_failed_custom_race_day = None
 
     # Program start
     while True:
@@ -401,7 +399,6 @@ def career_lobby():
         mood = check_mood(screenshot)
         mood_index = MOOD_LIST.index(mood)
         minimum_mood = MOOD_LIST.index(MINIMUM_MOOD)
-        turn = check_turn(screenshot)
         year = check_current_year(screenshot)
         goal_data = check_goal_name(screenshot)
         criteria_text = check_criteria(screenshot)
@@ -436,10 +433,10 @@ def career_lobby():
         dating_available = check_dating_available(screenshot)
         log_info(f"Dating Available: {dating_available}")
         
-        # Check if goals criteria are NOT met AND it is not Pre-Debut AND turn is less than 10
+        # Check if goals criteria are NOT met AND it is not Pre-Debut
         # Prioritize racing when criteria are not met to help achieve goals
         log_debug(f"Checking goal criteria...")
-        goal_analysis = check_goal_criteria({"text": criteria_text}, year, turn)
+        goal_analysis = check_goal_criteria({"text": criteria_text}, year)
         
         if goal_analysis["should_prioritize_racing"]:
             log_info(f"Decision: Criteria not met - Prioritizing races to meet goals")
@@ -512,12 +509,10 @@ def career_lobby():
         do_custom_race_enabled = racing_config_section.get("do_custom_race", False)
         
         if do_custom_race_enabled:
-            # Build day key using current year and turn to avoid repeat checks in the same day
             log_debug(f"Custom race is enabled, checking for custom race...")
             custom_race_found = do_custom_race()
             if custom_race_found:
             # Reset failure cache on success
-                last_failed_custom_race_day = None
                 log_info(f"Custom race executed successfully")
                 continue
             else:
@@ -795,14 +790,13 @@ def career_lobby():
         log_debug(f"Waiting before next iteration...")
         time.sleep(1)
 
-def check_goal_criteria(criteria_data, year, turn):
+def check_goal_criteria(criteria_data, year):
     """
     Check if goal criteria are met and determine if racing should be prioritized.
     
     Args:
         criteria_data (dict): The criteria data from OCR with text
         year (str): Current year text
-        turn (str/int): Current turn number or text
     
     Returns:
         dict: Dictionary containing criteria analysis and decision

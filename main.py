@@ -49,14 +49,14 @@ else:
     from core.Ura.execute import career_lobby
     mode_name = "URA"
 
-from utils.device import run_adb
+from utils.device import run_adb, _get_adb_path
 
 # Logging is now handled by utils.log module
 
 def check_adb_connection():
     """Check if ADB is connected to a device"""
     adb_config = load_config()  # This returns adb_config section
-    adb_path = adb_config.get('adb_path', 'adb')
+    adb_path = _get_adb_path()  # Use the function that finds bundled ADB
     device_address = adb_config.get('device_address', '')
     
     try:

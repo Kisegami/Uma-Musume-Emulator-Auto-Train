@@ -93,7 +93,7 @@
   "debug_mode": false,
   "stop_on_event_detection_failure": false,
   "update": {
-    "auto_update": false,
+    "auto_update": true,
     "install_dependencies": true,
     "branch": "main",
     "remote": "origin"
