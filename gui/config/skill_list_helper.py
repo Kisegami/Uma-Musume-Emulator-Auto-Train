@@ -17,7 +17,7 @@ def open_skill_list_window(skill_tab_instance):
     """Open window to edit skill lists"""
     try:
         # Load current skill data
-        skill_file = skill_tab_instance.skill_file_var.get()
+        skill_file = skill_tab_instance.get_skill_file_path()
         if not os.path.exists(skill_file):
             messagebox.showerror("Error", f"Skill file {skill_file} not found!")
             return

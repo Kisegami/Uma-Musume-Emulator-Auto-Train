@@ -368,7 +368,8 @@ def check_skill_points_cap(screenshot=None):
                 log_info(f"Detected available skill points: {available_points}")
 
                 # Build purchase plan from config priorities
-                skill_file = skills_config.get("skill_file", "skills.json")
+                skill_file = skills_config.get("skill_file", "template/skills/skills.json")
+                skill_file = _resolve_skill_file_path(skill_file)
                 log_info(f"Loading skills from: {skill_file}")
                 cfg = load_skill_config(skill_file)
                 purchase_plan = create_purchase_plan(all_skills, cfg, end_career=False)
@@ -662,3 +663,22 @@ def _create_energy_debug_visualization(original_image, contour, interior_mask, g
         
     except Exception as e:
         log_debug(f"Failed to create debug visualization: {e}")
+
+
+def _resolve_skill_file_path(path):
+    """Resolve skill config path, preferring files under skills/."""
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if not path:
+        return os.path.join(project_root, "template", "skills", "skills.json")
+    if os.path.isabs(path):
+        return path
+    normalized = path.replace("\\", "/")
+    candidates = [normalized]
+    base = os.path.basename(normalized)
+    if not normalized.startswith("template/skills/"):
+        candidates.append(os.path.join("template", "skills", base))
+    for candidate in candidates:
+        candidate_abs = os.path.join(project_root, candidate)
+        if os.path.exists(candidate_abs):
+            return candidate_abs
+    return os.path.join(project_root, candidates[-1])

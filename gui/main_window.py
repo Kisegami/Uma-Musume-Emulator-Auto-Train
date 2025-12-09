@@ -167,12 +167,12 @@ class MainWindow:
                 "allowed_tracks": ["Turf"],
                 "allowed_distances": ["Medium", "Long"],
                 "do_custom_race": True,
-                "custom_race_file": "custom_races.json"
+                "custom_race_file": "template/races/custom_races.json"
             },
             "skills": {
                 "skill_point_cap": 400,
                 "skill_purchase": "auto",
-                "skill_file": "skills_example.json",
+                "skill_file": "template/skills/skills.json",
                 "enable_skill_point_check": True
             },
             "restart_career": {

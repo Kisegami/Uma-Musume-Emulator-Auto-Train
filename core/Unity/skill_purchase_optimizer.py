@@ -58,11 +58,14 @@ def load_skill_config(config_path=None):
         try:
             main_config = load_main_config()
             skills_config = main_config.get("skills", {})
-            config_path = skills_config.get("skill_file", "skills.json")
+            config_path = skills_config.get("skill_file", "template/skills/skills.json")
             log_debug(f"Loading skills from config file: {config_path}")
         except Exception as e:
-            log_debug(f"Could not read config.json, using default skills.json: {e}")
-            config_path = "skills.json"
+            log_debug(f"Could not read config.json, using default template/skills/skills.json: {e}")
+            config_path = "template/skills/skills.json"
+
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    config_path = _resolve_skill_path(config_path, project_root)
     
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -81,6 +84,23 @@ def load_skill_config(config_path=None):
     except Exception as e:
         log_error(f"Error loading {config_path}: {e}")
         return {"skill_priority": [], "gold_skill_upgrades": {}}
+
+def _resolve_skill_path(config_path, project_root):
+    """Resolve skill config path, preferring files inside skills/."""
+    if not config_path:
+        return config_path
+    if os.path.isabs(config_path):
+        return config_path
+    normalized = config_path.replace("\\", "/")
+    candidates = [normalized]
+    base_name = os.path.basename(normalized)
+    if not normalized.startswith("template/skills/"):
+        candidates.append(os.path.join("template", "skills", base_name))
+    for candidate in candidates:
+        absolute = os.path.join(project_root, candidate)
+        if os.path.exists(absolute):
+            return absolute
+    return os.path.join(project_root, candidates[-1])
 
 def clean_ocr_text(text):
     """

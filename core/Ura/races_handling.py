@@ -771,9 +771,10 @@ def do_custom_race():
             custom_race_file = (
                 cfg.get("racing", {}).get("custom_race_file")
                 or cfg.get("custom_race_file")
-                or "custom_races.json"
+                or "template/races/custom_races.json"
             )
-            with open(os.path.join(project_root, custom_race_file), "r", encoding="utf-8") as f:
+            custom_race_path = _resolve_custom_race_path(custom_race_file, project_root)
+            with open(custom_race_path, "r", encoding="utf-8") as f:
                 custom_races = json.load(f)
         except Exception as e:
             log_debug(f"Failed to load custom races file: {e}")
@@ -842,3 +843,21 @@ def do_custom_race():
     except Exception as e:
         log_debug(f"Error in do_custom_race: {e}")
         return False
+
+
+def _resolve_custom_race_path(path, project_root):
+    """Resolve custom race file path, preferring files under races/."""
+    if not path:
+        path = "races/custom_races.json"
+    if os.path.isabs(path):
+        return path
+    normalized = path.replace("\\", "/")
+    candidates = [normalized]
+    base_name = os.path.basename(normalized)
+    if not normalized.startswith("template/races/"):
+        candidates.append(os.path.join("template", "races", base_name))
+    for candidate in candidates:
+        candidate_abs = os.path.join(project_root, candidate)
+        if os.path.exists(candidate_abs):
+            return candidate_abs
+    return os.path.join(project_root, candidates[-1])

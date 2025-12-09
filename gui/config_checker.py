@@ -23,8 +23,8 @@ class ConfigChecker:
             "event_priority.json": "event_priority.example.json", 
             "training_score.json": "training_score.example.json",
             "training_score_unity.json": "training_score_unity.example.json",
-            "custom_races.json": "custom_races.example.json",
-            "skills.json": "skills.example.json"
+            "template/races/custom_races.json": "template/races/custom_races.example.json",
+            "template/skills/skills.json": "template/skills/skills.example.json"
         }
     
     def deep_merge(self, existing_dict, example_dict):
@@ -86,6 +86,7 @@ class ConfigChecker:
         for config_file, example_file in self.required_configs.items():
             config_path = self.root_dir / config_file
             example_path = self.root_dir / example_file
+            config_path.parent.mkdir(parents=True, exist_ok=True)
             
             if config_path.exists():
                 # File exists, check if we need to merge missing keys

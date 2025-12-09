@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 import json
 import os
+import shutil
 
 try:
     from .base_tab import BaseTab
@@ -140,18 +141,38 @@ class RacingTab(BaseTab):
         if self.do_custom_race_var.get():
             self.custom_race_settings_frame.pack(fill=tk.X, padx=15, pady=5)
 
-        # Custom Race File with Browse + Edit button
+        # Custom Race File dropdown with Add/Remove/Edit buttons
         file_row = ctk.CTkFrame(self.custom_race_settings_frame, fg_color="transparent")
         file_row.pack(fill=tk.X, pady=(0,5))
         ctk.CTkLabel(file_row, text="Custom Race File:", text_color=self.colors['text_light'], font=get_font('label')).pack(side=tk.LEFT)
-        self.custom_race_file_var = tk.StringVar(value=config.get('custom_race_file', 'custom_races.json'))
+        templates = self._load_custom_race_templates()
+        current_template = os.path.basename(config.get('custom_race_file', 'custom_races.json'))
+        if current_template and current_template not in templates:
+            templates.append(current_template)
+        templates = sorted([t for t in templates if t])
+
+        self.custom_race_file_var = tk.StringVar(value=current_template if current_template else (templates[0] if templates else ""))
         self.custom_race_file_var.trace('w', self.on_racing_setting_change)
-        file_controls = ctk.CTkFrame(file_row, fg_color="transparent")
-        file_controls.pack(side=tk.RIGHT)
-        ctk.CTkEntry(file_controls, textvariable=self.custom_race_file_var, width=220, corner_radius=8, font=get_font('input')).pack(side=tk.LEFT, padx=(0, 5))
-        ctk.CTkButton(file_controls, text="Open File", command=self.open_custom_race_file, fg_color=self.colors['accent_blue'], corner_radius=8, height=30, width=90, font=get_font('button')).pack(side=tk.LEFT, padx=(0, 5))
-        # Edit button below
-        ctk.CTkButton(self.custom_race_settings_frame, text="Edit Custom Race List", command=self.open_custom_race_list_window, fg_color=self.colors['accent_green'], corner_radius=8, height=30, width=160, font=get_font('button')).pack(anchor=tk.W, padx=0, pady=(0,5))
+
+        dropdown = ctk.CTkOptionMenu(
+            file_row,
+            values=templates if templates else ["No templates"],
+            variable=self.custom_race_file_var,
+            fg_color=self.colors['accent_blue'],
+            corner_radius=8,
+            button_color=self.colors['accent_blue'],
+            button_hover_color=self.colors['accent_green'],
+            width=200
+        )
+        dropdown.pack(side=tk.LEFT, padx=(10, 10))
+        self.custom_race_dropdown = dropdown
+        self._refresh_custom_race_dropdown(select=self.custom_race_file_var.get())
+
+        btn_row = ctk.CTkFrame(file_row, fg_color="transparent")
+        btn_row.pack(side=tk.LEFT, padx=(0,5))
+        ctk.CTkButton(btn_row, text="Add New", command=self.add_custom_race_template, fg_color=self.colors['accent_blue'], corner_radius=8, width=90, height=30).pack(side=tk.LEFT, padx=(0,5))
+        ctk.CTkButton(btn_row, text="Remove", command=self.remove_custom_race_template, fg_color=self.colors['accent_red'], corner_radius=8, width=90, height=30).pack(side=tk.LEFT, padx=(0,5))
+        ctk.CTkButton(btn_row, text="Edit", command=self.edit_custom_race_template, fg_color=self.colors['accent_green'], corner_radius=8, width=90, height=30).pack(side=tk.LEFT)
     
     def save_racing_settings(self):
         """Save racing settings to config"""
@@ -170,7 +191,7 @@ class RacingTab(BaseTab):
             config['racing']['allowed_distances'] = [d for d, v in self.allowed_distances_vars.items() if v.get()]
             # Custom races
             config['racing']['do_custom_race'] = self.do_custom_race_var.get()
-            config['racing']['custom_race_file'] = self.custom_race_file_var.get()
+            config['racing']['custom_race_file'] = self._build_custom_race_path(self.custom_race_file_var.get())
             
             self.main_window.set_config(config)
             messagebox.showinfo("Success", "Racing settings saved successfully!")
@@ -200,25 +221,11 @@ class RacingTab(BaseTab):
         config['racing']['allowed_distances'] = [d for d, v in self.allowed_distances_vars.items() if v.get()]
         # Custom races
         config['racing']['do_custom_race'] = self.do_custom_race_var.get()
-        config['racing']['custom_race_file'] = self.custom_race_file_var.get()
+        config['racing']['custom_race_file'] = self._build_custom_race_path(self.custom_race_file_var.get())
     
     def on_racing_setting_change(self, *args):
         """Called when any racing setting variable changes - auto-save"""
         self.on_setting_change(*args)
-
-    def open_custom_race_file(self):
-        """Open file dialog to choose custom race file"""
-        try:
-            filename = filedialog.askopenfilename(
-                title="Select Custom Race File",
-                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-                initialfile=self.custom_race_file_var.get(),
-                parent=self.config_panel.winfo_toplevel()
-            )
-            if filename:
-                self.custom_race_file_var.set(os.path.basename(filename))
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to open file dialog: {e}")
 
     def open_custom_race_list_window(self):
         """Open the Custom Race List editor window"""
@@ -227,10 +234,10 @@ class RacingTab(BaseTab):
             with open('assets/races/clean_race_data.json', 'r', encoding='utf-8') as f:
                 all_races = json.load(f)
             # Load current selections; also use its keys to ensure all periods appear
-            custom_file = self.custom_race_file_var.get() or 'custom_races.json'
+            custom_file = self._ensure_custom_race_file_exists(self.custom_race_file_var.get())
             selections = {}
             period_order = []
-            if os.path.exists(custom_file):
+            if custom_file and os.path.exists(custom_file):
                 with open(custom_file, 'r', encoding='utf-8') as f:
                     selections = json.load(f)
                     period_order = list(selections.keys())
@@ -415,3 +422,111 @@ class RacingTab(BaseTab):
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open Custom Race List window: {e}")
+
+    # ---------------- Helpers for custom race templates ---------------- #
+    def _get_races_dir(self):
+        """Ensure and return the races templates directory."""
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        races_dir = os.path.join(project_root, "template", "races")
+        os.makedirs(races_dir, exist_ok=True)
+        return races_dir
+
+    def _load_custom_race_templates(self):
+        """List available custom race JSON templates."""
+        races_dir = self._get_races_dir()
+        templates = [f for f in os.listdir(races_dir) if f.lower().endswith(".json")]
+        templates.sort()
+        return templates
+
+    def _build_custom_race_path(self, filename):
+        """Normalize the stored path for the selected template."""
+        if not filename:
+            return ""
+        if os.path.isabs(filename):
+            return filename
+        normalized = filename.replace("\\", "/")
+        if normalized.startswith("template/races/"):
+            return normalized
+        return os.path.join("template", "races", filename).replace("\\", "/")
+
+    def _ensure_custom_race_file_exists(self, filename):
+        """Create the selected custom race file from example if missing."""
+        races_dir = self._get_races_dir()
+        target = self._build_custom_race_path(filename or "custom_races.json")
+        target_abs = target if os.path.isabs(target) else os.path.join(races_dir if not target.startswith("template/races/") else os.path.abspath(os.path.join(races_dir, "..", "..")), target)
+        if not os.path.exists(target_abs):
+            example = os.path.join(races_dir, "custom_races.example.json")
+            try:
+                if os.path.exists(example):
+                    shutil.copy(example, target_abs)
+                else:
+                    with open(target_abs, 'w', encoding='utf-8') as f:
+                        json.dump({}, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to create template: {e}")
+        return target_abs
+
+    def _refresh_custom_race_dropdown(self, select=None):
+        """Refresh dropdown values after add/remove."""
+        templates = self._load_custom_race_templates()
+        if select and select not in templates:
+            templates.append(select)
+        templates = sorted([t for t in templates if t])
+        values = templates if templates else ["No templates"]
+        self.custom_race_dropdown.configure(values=values, state=("normal" if templates else "disabled"))
+        if self.custom_race_file_var.get() not in templates:
+            self.custom_race_file_var.set(select if select in templates else (templates[0] if templates else ""))
+
+    def add_custom_race_template(self):
+        """Create a new custom race template file from the example."""
+        dialog = ctk.CTkInputDialog(text="Enter new custom race filename (without extension):", title="Add Custom Race Template")
+        name = dialog.get_input() if dialog else None
+        if not name or not name.strip():
+            return
+        safe_name = name.strip()
+        if not safe_name.lower().endswith(".json"):
+            safe_name += ".json"
+        target = os.path.join(self._get_races_dir(), safe_name)
+        if os.path.exists(target):
+            messagebox.showwarning("Exists", f"'{safe_name}' already exists.")
+            return
+        example = os.path.join(self._get_races_dir(), "custom_races.example.json")
+        try:
+            if os.path.exists(example):
+                shutil.copy(example, target)
+            else:
+                with open(target, 'w', encoding='utf-8') as f:
+                    json.dump({}, f, indent=2, ensure_ascii=False)
+            self._refresh_custom_race_dropdown(select=safe_name)
+            self.custom_race_file_var.set(safe_name)
+            messagebox.showinfo("Created", f"Created {safe_name} in races/")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to create template: {e}")
+
+    def remove_custom_race_template(self):
+        """Remove the selected custom race template file."""
+        filename = self.custom_race_file_var.get()
+        if not filename:
+            messagebox.showwarning("No selection", "No template selected.")
+            return
+        path = os.path.join(self._get_races_dir(), filename)
+        if not os.path.exists(path):
+            messagebox.showwarning("Missing", "Selected template file does not exist.")
+            return
+        if not messagebox.askyesno("Confirm", f"Remove template '{filename}'?"):
+            return
+        try:
+            os.remove(path)
+            self._refresh_custom_race_dropdown()
+            messagebox.showinfo("Removed", f"Removed template '{filename}'.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to remove template: {e}")
+
+    def edit_custom_race_template(self):
+        """Open the editor for the currently selected template."""
+        filename = self.custom_race_file_var.get()
+        if not filename:
+            messagebox.showwarning("No selection", "No template selected.")
+            return
+        self.custom_race_file_var.set(filename)
+        self.open_custom_race_list_window()

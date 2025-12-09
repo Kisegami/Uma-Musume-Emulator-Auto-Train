@@ -40,9 +40,7 @@
     "spirit_burst_enabled_stats": [
       "spd",
       "sta",
-      "pwr",
-      "guts",
-      "wit"
+      "pwr"
     ],
     "stat_caps": {
       "spd": 1100,
@@ -67,16 +65,16 @@
       "Long"
     ],
     "do_custom_race": true,
-    "custom_race_file": "custom_races.json"
+    "custom_race_file": "template/races/custom_races.json"
   },
   "skills": {
     "skill_point_cap": 400,
     "skill_purchase": "auto",
-    "skill_file": "skills_example.json",
+    "skill_file": "template/skills/skills.json",
     "enable_skill_point_check": true
   },
   "restart_career": {
-    "restart_enabled": true,
+    "restart_enabled": false,
     "restart_times": 2,
     "total_fans_requirement": 0
   },
