@@ -45,6 +45,7 @@ Right now **UMAT** support 2 senario: **URA Finales** and **Unity Cup**
 2. Install all dependencies
 3. Run **launch_gui.py**
 
+
 ## Configs
 ### Configure Android Emulator
 1. **Install an Android emulator** (Mumu Emulator 12 or LDPlayer9 recommended)
@@ -53,6 +54,10 @@ Right now **UMAT** support 2 senario: **URA Finales** and **Unity Cup**
 4. **Install Uma Musume** in the emulator
 ### Configure UMAT
 Refer to [Config Guide](https://github.com/Kisegami/Uma-Musume-Emulator-Auto-Train/wiki/Config-Guide-%5BEN%5D)
+
+## Always start the bot on Lobby Screen
+The bot need to start on lobby screen, the place that you can see training button and Tazuna Hint icon on the top right under the HUD
+![lobby](Docs/lobby.png)
 
 ## Contribute
 If you run into any issues or something doesn't work as expected, feel free to open an issue.
