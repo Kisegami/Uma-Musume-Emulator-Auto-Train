@@ -7,7 +7,7 @@
 
 An automated training bot for Uma Musume: Pretty Derby that works with **Android emulators** using ADB (Android Debug Bridge). This aim for fully automate gameplay for busy players.
 Right now **UMAT** support 2 senario: **URA Finales** and **Unity Cup**
-
+![](Docs/app.png)
 ## Highlighted Features
 - **Easy to setup and config:** Using automated setup and really simple but efficient config for your training 
 - **Score based training system:** Calculate score to train using elements like Support cards, hint, bond,...
@@ -57,7 +57,9 @@ Refer to [Config Guide](https://github.com/Kisegami/Uma-Musume-Emulator-Auto-Tra
 
 ## Always start the bot on Lobby Screen
 The bot need to start on lobby screen, the place that you can see training button and Tazuna Hint icon on the top right under the HUD
-![lobby](Docs/lobby.png)
+<div align="center">
+<img src="Docs/lobby.png" alt="Description" width="200"/>
+</div>
 
 ## Contribute
 If you run into any issues or something doesn't work as expected, feel free to open an issue.
