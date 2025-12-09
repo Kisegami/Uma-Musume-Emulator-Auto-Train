@@ -60,3 +60,4 @@ skills.json
 custom_races_oguri.json
 debug_*.png
 tests/
+*.exe

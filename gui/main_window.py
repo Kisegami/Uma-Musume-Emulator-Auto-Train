@@ -5,14 +5,6 @@ import json
 import os
 from datetime import datetime
 
-# Import centralized font management
-try:
-    from .font_manager import get_font_manager, get_font
-    from .font_config_editor import open_font_editor
-except ImportError:
-    from font_manager import get_font_manager, get_font
-    from font_config_editor import open_font_editor
-
 try:
     from .config_panel import ConfigPanel
     from .status_panel import StatusPanel
@@ -27,7 +19,7 @@ except ImportError:
 class MainWindow:
     def __init__(self, root):
         self.root = root
-        self.root.title("Uma Musume Auto-Train Bot")
+        self.root.title("Uma Musume Auto Train")
         self.root.geometry("1400x900")
         self.root.minsize(1200, 800)
         self.set_app_icon()
@@ -64,48 +56,12 @@ class MainWindow:
         
         # Load configuration
         self.load_config()
-        
-        # Create menu bar
-        self.create_menu()
-        
+
         # Create GUI components
         self.create_widgets()
         
         # Initialize bot controller
         self.bot_controller = BotController(self)
-    
-    def create_menu(self):
-        """Create menu bar with font configuration option"""
-        try:
-            # Create menu bar
-            menubar = tk.Menu(self.root, bg=self.colors['bg_medium'], fg=self.colors['text_light'])
-            self.root.config(menu=menubar)
-            
-            # Settings menu
-            settings_menu = tk.Menu(menubar, tearoff=0, bg=self.colors['bg_medium'], fg=self.colors['text_light'])
-            menubar.add_cascade(label="Settings", menu=settings_menu)
-            settings_menu.add_command(label="Font Configuration...", command=self.open_font_config)
-            settings_menu.add_separator()
-            settings_menu.add_command(label="Reload Fonts", command=self.reload_fonts)
-            
-        except Exception as e:
-            print(f"Error creating menu: {e}")
-    
-    def open_font_config(self):
-        """Open the font configuration editor"""
-        try:
-            open_font_editor(self.root)
-        except Exception as e:
-            self.add_log(f"Error opening font editor: {e}", "error")
-    
-    def reload_fonts(self):
-        """Reload font configuration"""
-        try:
-            from font_manager import reload_fonts
-            reload_fonts()
-            self.add_log("Font configuration reloaded", "success")
-        except Exception as e:
-            self.add_log(f"Error reloading fonts: {e}", "error")
 
     def create_widgets(self):
         """Create the main layout with three main panels using modern customtkinter"""
@@ -348,7 +304,7 @@ class MainWindow:
 def main():
     """Main function to run the modern GUI"""
     root = ctk.CTk()
-    root.title("Uma Musume Auto-Train Bot")
+    root.title("Uma Musume Auto Train")
     app = MainWindow(root)
     
     # Handle window close
