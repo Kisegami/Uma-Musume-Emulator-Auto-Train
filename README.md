@@ -36,7 +36,8 @@ Right now **UMAT** support 2 senario: **URA Finales** and **Unity Cup**
     It will download everything, so just wait. It may ask you to install **Tesseract**, install it and don't **change** the Tesseract Path when install.
     
     You may need to close and re-open for it to auto update
-3. Enjoy
+3. Config the bot **See Below**
+4. Enjoy!
 
 #### Method 2: Manual Method
 
