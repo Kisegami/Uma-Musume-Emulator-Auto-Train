@@ -22,7 +22,8 @@ TEAM_TEMPLATES = {
     "C": "assets/unity/team_c.png",
     "D": "assets/unity/team_d.png",
     "E": "assets/unity/team_e.png",
-    # "G": "assets/unity/team_f.png" if False else None,  # placeholder if ever needed
+    # "G": "assets/unity/team_f.png"
+    if False else None,  # placeholder if ever needed
 }
 
 OPPONENT_TEMPLATES = {

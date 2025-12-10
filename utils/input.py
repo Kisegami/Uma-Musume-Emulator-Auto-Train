@@ -22,6 +22,16 @@ def swipe(start_x, start_y, end_x, end_y, duration_ms=20):
     """Swipe from (start_x, start_y) to (end_x, end_y) with duration in milliseconds - optimized: no input delay, faster default duration"""
     return run_adb(['shell', 'input', 'swipe', str(start_x), str(start_y), str(end_x), str(end_y), str(duration_ms)], add_input_delay=False)
 
+def perform_swipe(start_x, start_y, end_x, end_y, duration_ms=1050):
+    """Perform smooth swipe gesture with optional longer duration."""
+    swipe_command = ['shell', 'input', 'swipe', str(start_x), str(start_y), str(end_x), str(end_y), str(duration_ms)]
+    result = run_adb(swipe_command)
+    if result is not None:
+        log_debug(f"Swiped from ({start_x}, {start_y}) to ({end_x}, {end_y})")
+        return True
+    log_debug("Failed to perform swipe")
+    return False
+
 def long_press(x, y, duration_ms=1000):
     """Long press at coordinates (x, y) for duration_ms milliseconds - optimized: no input delay"""
     return swipe(x, y, x, y, duration_ms)

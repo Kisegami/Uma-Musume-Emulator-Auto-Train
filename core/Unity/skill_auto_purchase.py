@@ -1,9 +1,9 @@
 import time
 import os
 import json
-from core.Unity.skill_recognizer import take_screenshot, perform_swipe, recognize_skill_up_locations
+from core.Unity.skill_recognizer import take_screenshot, recognize_skill_up_locations
+from utils.input import perform_swipe, tap
 from core.Unity.skill_purchase_optimizer import fuzzy_match_skill_name
-from utils.device import run_adb
 from utils.log import log_debug, log_info, log_warning, log_error
 
 # Skill list swipe coordinates (optimized for skill screen)
@@ -36,7 +36,7 @@ def swipe_skill_list_up_fast(wait_before=0.5):
     return perform_swipe(
         SKILL_LIST_CENTER_X, SKILL_LIST_TOP_Y, 
         SKILL_LIST_CENTER_X, SKILL_LIST_SCROLL_TARGET_TOP, 
-        duration=300
+        duration_ms=300
     )
 
 def swipe_skill_list_down_slow(wait_before=0.5):
@@ -54,7 +54,7 @@ def swipe_skill_list_down_slow(wait_before=0.5):
     return perform_swipe(
         SKILL_LIST_CENTER_X, SKILL_LIST_BOTTOM_Y,
         SKILL_LIST_CENTER_X, SKILL_LIST_SCROLL_TARGET_BOTTOM,
-        duration=1050
+        duration_ms=1050
     )
 
 
@@ -199,14 +199,12 @@ def click_skill_up_button(x, y):
         bool: True if click was successful, False otherwise
     """
     try:
-        click_command = ['shell', 'input', 'tap', str(x), str(y)]
-        result = run_adb(click_command)
+        result = tap(x, y)
         if result is not None:
             log_debug(f"Clicked skill_up button at ({x}, {y}")
             return True
-        else:
-            log_error(f"Failed to click at ({x}, {y}")
-            return False
+        log_error(f"Failed to click at ({x}, {y}")
+        return False
     except Exception as e:
         log_error(f"Error clicking button: {e}")
         return False

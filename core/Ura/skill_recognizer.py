@@ -6,7 +6,7 @@ import time
 import re
 import json
 from utils.screenshot import take_screenshot
-from utils.device import run_adb
+from utils.input import perform_swipe
 
 from utils.log import log_debug, log_info, log_warning, log_error
 
@@ -74,32 +74,6 @@ def remove_overlapping_rectangles(rectangles, overlap_threshold=0.5):
         result.append((x1, y1, x2 - x1, y2 - y1))
     
     return result
-
-
-def perform_swipe(start_x, start_y, end_x, end_y, duration=1050):
-    """
-    Perform smooth swipe gesture using ADB.
-    
-    Args:
-        start_x, start_y: Starting coordinates
-        end_x, end_y: Ending coordinates  
-        duration: Swipe duration in milliseconds (optimized for smooth scrolling)
-    
-    Returns:
-        bool: True if swipe was successful, False otherwise
-    """
-    try:
-        swipe_command = ['shell', 'input', 'swipe', str(start_x), str(start_y), str(end_x), str(end_y), str(duration)]
-        result = run_adb(swipe_command)
-        if result is not None:
-            log_debug(f"Swiped from ({start_x}, {start_y}) to ({end_x}, {end_y})")
-            return True
-        else:
-            log_debug(f"Failed to perform swipe")
-            return False
-    except Exception as e:
-        log_debug(f"Error performing swipe: {e}")
-        return False
 
 def extract_skill_info(screenshot, button_x, button_y, anchor_x=946, anchor_y=809):
     """
