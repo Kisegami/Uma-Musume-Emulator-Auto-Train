@@ -6,30 +6,6 @@ from core.Unity.skill_recognizer import scan_all_skills_with_scroll
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.config_loader import load_main_config
 
-# Global cache for skill names
-_all_skill_names = None
-
-def load_all_skill_names():
-    """Load all valid skill names from uma_skills.json"""
-    global _all_skill_names
-    if _all_skill_names is not None:
-        return _all_skill_names
-    
-    try:
-        skills_file_path = "assets/skills/uma_skills.json"
-        if os.path.exists(skills_file_path):
-            with open(skills_file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                _all_skill_names = data.get("skills", [])
-                log_debug(f"Loaded {len(_all_skill_names)} skill names from {skills_file_path}")
-                return _all_skill_names
-        else:
-            log_warning(f"Skill names file not found: {skills_file_path}")
-            return []
-    except Exception as e:
-        log_error(f"Error loading skill names: {e}")
-        return []
-
 # Fix Windows console encoding for Unicode support
 if os.name == 'nt':  # Windows
     try:
@@ -117,58 +93,23 @@ def clean_ocr_text(text):
     
     # Remove extra whitespace and normalize
     text = ' '.join(text.split())
-    
-    # Common OCR corrections
-    corrections = {
-        '0': 'O',  # Zero to letter O
-        '1': 'I',  # One to letter I (in some contexts)
-        '5': 'S',  # Five to letter S (in some contexts)
-        '8': 'B',  # Eight to letter B (in some contexts)
-    }
-    
-    # Apply corrections carefully (only at word boundaries to avoid over-correction)
-    # This is conservative - we may want to expand this based on actual OCR errors seen
-    
     return text.strip()
+
+def _normalize(text):
+    """Lowercase and strip punctuation/extra spaces for comparison."""
+    if not text:
+        return ""
+    import re
+    normalized = re.sub(r"[^\w\s]", "", text.lower())
+    return " ".join(normalized.split())
+
 
 def find_best_real_skill_match(ocr_skill_name, target_skill_name=None, threshold=0.85):
     """
-    Find the best matching real skill name from the game's skill list.
-    Uses the actual uma_skills.json to ensure we only match real skills.
-    
-    Args:
-        ocr_skill_name: Skill name detected by OCR (potentially with errors)
-        target_skill_name: Skill name from user config (optional, for validation)
-        threshold: Minimum similarity ratio (0.0 to 1.0)
-    
-    Returns:
-        dict: {
-            'match': str or None,  # Best matching real skill name
-            'confidence': float,   # Confidence score (0.0 to 1.0)
-            'exact_match': bool,   # True if exact match found
-            'is_target_match': bool  # True if matches the target skill
-        }
+    Lightweight matcher that compares OCR text directly to the target skill name.
+    No external skill database is used.
     """
-    all_skills = load_all_skill_names()
-    if not all_skills:
-        log_warning("No skill names loaded - falling back to basic matching")
-        if target_skill_name:
-            return {
-                'match': target_skill_name,
-                'confidence': 0.8,
-                'exact_match': False,
-                'is_target_match': True
-            }
-        return {
-            'match': None,
-            'confidence': 0.0,
-            'exact_match': False,
-            'is_target_match': False
-        }
-    
-    # Clean the OCR input
     clean_ocr = clean_ocr_text(ocr_skill_name).lower().strip()
-    
     if not clean_ocr:
         return {
             'match': None,
@@ -177,111 +118,34 @@ def find_best_real_skill_match(ocr_skill_name, target_skill_name=None, threshold
             'is_target_match': False
         }
     
-    best_match = None
-    best_confidence = 0.0
-    exact_match = False
-    is_target_match = False
+    if target_skill_name:
+        target_clean = target_skill_name.lower().strip()
+        similarity = SequenceMatcher(None, clean_ocr, target_clean).ratio()
+        exact = clean_ocr == target_clean
+        is_target = similarity >= threshold
+        return {
+            'match': target_skill_name if is_target else None,
+            'confidence': similarity,
+            'exact_match': exact,
+            'is_target_match': is_target
+        }
     
-    # Try exact match first
-    for skill in all_skills:
-        if clean_ocr == skill.lower().strip():
-            exact_match = True
-            best_match = skill
-            best_confidence = 1.0
-            is_target_match = (target_skill_name and skill.lower().strip() == target_skill_name.lower().strip())
-            break
-    
-    # If no exact match, try fuzzy matching against all real skills
-    if not exact_match:
-        for skill in all_skills:
-            skill_clean = skill.lower().strip()
-            
-            # Pre-filter: Skip skills that have significantly different word structure
-            # Only if target is specified and we have high-confidence word differences
-            if target_skill_name:
-                target_clean = target_skill_name.lower().strip()
-                target_words = set(target_clean.split())
-                skill_words = set(skill_clean.split())
-                ocr_words = set(clean_ocr.split())
-                
-                # Check if this is the target skill - if so, allow it through for fuzzy matching
-                if skill_clean == target_clean:
-                    pass  # Always allow target skill through
-                # If word counts are very different, this is likely a different skill
-                elif abs(len(skill_words) - len(target_words)) > 1:
-                    # But allow if OCR text has similar word count (OCR might have split/joined words)
-                    if abs(len(ocr_words) - len(skill_words)) > 1:
-                        continue
-                # Check for added qualifier words (like "Quick" in "Quick Acceleration")
-                else:
-                    extra_words_in_skill = skill_words - target_words
-                    # Skip if there are significant extra qualifying words
-                    qualifying_words = ['quick', 'fast', 'slow', 'super', 'ultra', 'mega', 'mini', 'great', 'grand', 'advanced', 'enhanced']
-                    significant_extras = [w for w in extra_words_in_skill if w in qualifying_words]
-                    if significant_extras:
-                        continue
-            
-            # Calculate similarity
-            similarity = SequenceMatcher(None, clean_ocr, skill_clean).ratio()
-            
-            # Bonus for target skill match (if we're looking for a specific target)
-            # But only if the similarity is already quite high to prevent false matches
-            if target_skill_name:
-                target_clean = target_skill_name.lower().strip()
-                # Check if both the real skill matches OCR well AND matches the target (with tolerance for punctuation)
-                # Strip punctuation for comparison
-                skill_no_punct = ''.join(c for c in skill_clean if c.isalnum() or c.isspace())
-                target_no_punct = ''.join(c for c in target_clean if c.isalnum() or c.isspace())
-                if skill_no_punct == target_no_punct and similarity >= 0.9:
-                    similarity += 0.05  # Small bonus for target match, only for high-confidence matches
-                    similarity = min(similarity, 1.0)  # Cap at 1.0
-            
-            if similarity > best_confidence and similarity >= threshold:
-                best_match = skill
-                best_confidence = similarity
-                # Check if this matches the target (ignoring punctuation differences)
-                if target_skill_name:
-                    target_clean = target_skill_name.lower().strip()
-                    skill_no_punct = ''.join(c for c in skill_clean if c.isalnum() or c.isspace())
-                    target_no_punct = ''.join(c for c in target_clean if c.isalnum() or c.isspace())
-                    is_target_match = (skill_no_punct == target_no_punct)
-                else:
-                    is_target_match = False
-    
-    log_debug(f"Skill match: '{ocr_skill_name}' -> '{best_match}' (confidence: {best_confidence:.3f}, target: {target_skill_name})")
-    
+    # No target provided; return the cleaned OCR text as best effort
     return {
-        'match': best_match,
-        'confidence': best_confidence,
-        'exact_match': exact_match,
-        'is_target_match': is_target_match
+        'match': clean_ocr,
+        'confidence': 1.0,
+        'exact_match': True,
+        'is_target_match': False
     }
 
 def fuzzy_match_skill_name(skill_name, target_name, threshold=0.8):
     """
-    Check if two skill names match using the real skill database.
-    This replaces the old fuzzy matching with precise matching against known skills.
-    
-    Args:
-        skill_name: Name from OCR scan
-        target_name: Name from config file or another OCR scan
-        threshold: Minimum similarity ratio (0.0 to 1.0)
-    
-    Returns:
-        bool: True if both names refer to the same real skill
+    Check if two skill names match directly using string similarity (no DB lookup).
     """
-    # Match both names against the real skill database
-    skill_result = find_best_real_skill_match(skill_name, None, threshold)
-    target_result = find_best_real_skill_match(target_name, None, threshold)
-    
-    # If both matched to the same real skill (ignoring punctuation), they match
-    if skill_result['match'] and target_result['match']:
-        # Normalize by removing punctuation for comparison
-        skill_normalized = ''.join(c for c in skill_result['match'].lower() if c.isalnum() or c.isspace())
-        target_normalized = ''.join(c for c in target_result['match'].lower() if c.isalnum() or c.isspace())
-        return skill_normalized == target_normalized
-    
-    return False
+    if not skill_name or not target_name:
+        return False
+    similarity = SequenceMatcher(None, _normalize(skill_name), _normalize(target_name)).ratio()
+    return similarity >= threshold
 
 def find_matching_skill(skill_name, available_skills):
     """
@@ -301,18 +165,16 @@ def find_matching_skill(skill_name, available_skills):
             log_debug(f"Exact match found: '{skill['name']}' matches '{skill_name}'")
             return skill
     
-    # Use the new precise matching system to find best matches for each available skill
+    # Use direct fuzzy matching against available skills (no DB)
     best_skill = None
     best_confidence = 0.0
     
     for skill in available_skills:
-        # Check if this available skill matches our target skill
-        match_result = find_best_real_skill_match(skill['name'], skill_name, threshold=0.8)
-        
-        if match_result['is_target_match'] and match_result['confidence'] > best_confidence:
+        similarity = SequenceMatcher(None, _normalize(skill.get('name', '')), _normalize(skill_name)).ratio()
+        if similarity >= 0.8 and similarity > best_confidence:
             best_skill = skill
-            best_confidence = match_result['confidence']
-            log_debug(f"Real skill match: '{skill['name']}' -> '{match_result['match']}' matches target '{skill_name}' (confidence: {match_result['confidence']:.3f})")
+            best_confidence = similarity
+            log_debug(f"Match: '{skill['name']}' matches target '{skill_name}' (confidence: {similarity:.3f})")
     
     if best_skill:
         log_debug(f"Best match found: '{best_skill['name']}' for target '{skill_name}' (confidence: {best_confidence:.3f})")
