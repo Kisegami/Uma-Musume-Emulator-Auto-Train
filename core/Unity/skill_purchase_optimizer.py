@@ -2,7 +2,7 @@ import json
 import os
 import sys
 from difflib import SequenceMatcher
-from core.Unity.skill_recognizer import scan_all_skills_with_scroll
+from core.Unity.skill_recognizer import scan_all_skills_with_scroll, deduplicate_skills
 from utils.log import log_debug, log_info, log_warning, log_error
 from utils.config_loader import load_main_config
 
@@ -205,8 +205,11 @@ def create_purchase_plan(available_skills, config, end_career=False):
     skill_priority = config.get("skill_priority", [])
     gold_upgrades = config.get("gold_skill_upgrades", {})
     
+    # Deduplicate first to prevent buying the same skill twice from OCR noise
+    deduped_skills = deduplicate_skills(available_skills, similarity_threshold=0.8)
+    
     # Create lookup for available skills (exact match)
-    available_by_name = {skill['name']: skill for skill in available_skills}
+    available_by_name = {skill['name']: skill for skill in deduped_skills}
     
     purchase_plan = []
     
@@ -214,6 +217,8 @@ def create_purchase_plan(available_skills, config, end_career=False):
     log_debug(f"Priority list: {len(skill_priority)} skills")
     log_debug(f"Gold upgrades: {len(gold_upgrades)} relationships")
     log_debug(f"Available skills: {len(available_skills)} skills")
+    if len(deduped_skills) != len(available_skills):
+        log_debug(f"Deduped skills: {len(deduped_skills)} skills (removed duplicates)")
     
     # End-career mode: prioritize skill list first, then buy remaining skills
     if end_career:
@@ -226,21 +231,21 @@ def create_purchase_plan(available_skills, config, end_career=False):
             base_skill_name = gold_upgrades[priority_skill]
             
             # Rule 1: If gold skill appears → buy it (try exact then fuzzy match)
-            skill = available_by_name.get(priority_skill) or find_matching_skill(priority_skill, available_skills)
+            skill = available_by_name.get(priority_skill) or find_matching_skill(priority_skill, deduped_skills)
             if skill:
                 purchase_plan.append(skill)
                 log_info(f"Gold skill found: {skill['name']} - {skill['price']}")
                 
             # Rule 2: If gold not available but base skill appears → buy base
             else:
-                base_skill = available_by_name.get(base_skill_name) or find_matching_skill(base_skill_name, available_skills)
+                base_skill = available_by_name.get(base_skill_name) or find_matching_skill(base_skill_name, deduped_skills)
                 if base_skill:
                     purchase_plan.append(base_skill)
                     log_info(f"Base skill found: {base_skill['name']} - {base_skill['price']} (for {priority_skill}")
                 
         else:
             # Regular skill - just buy if available (try exact then fuzzy match)
-            skill = available_by_name.get(priority_skill) or find_matching_skill(priority_skill, available_skills)
+            skill = available_by_name.get(priority_skill) or find_matching_skill(priority_skill, deduped_skills)
             if skill:
                 purchase_plan.append(skill)
                 log_info(f"Regular skill: {skill['name']} - {skill['price']}")
@@ -252,7 +257,7 @@ def create_purchase_plan(available_skills, config, end_career=False):
         
         # Find remaining skills not yet selected
         remaining_skills = [
-            skill for skill in available_skills 
+            skill for skill in deduped_skills 
             if skill['name'] not in purchased_skill_names
         ]
         
