@@ -11,7 +11,8 @@ import time
 from typing import Dict, Any, Optional, Tuple
 
 # Add the project root to the path so we can import our modules
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Go up 3 levels from core/Unity/restart_career.py to get project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(PROJECT_ROOT)
 SUPPORTS_DIR = os.path.join(PROJECT_ROOT, "template", "supports")
 os.makedirs(SUPPORTS_DIR, exist_ok=True)
@@ -243,21 +244,26 @@ def filter_support():
     log_info(f"Support template toggle: {use_templates}, template name: '{template_name}'")
     if use_templates:
         template_path = os.path.join(SUPPORTS_DIR, template_name) if template_name else None
-        if template_path and os.path.exists(template_path):
-            log_info(f"Support template mode ON -> using '{template_name}' at '{template_path}'")
-            screenshot = take_screenshot()
-            matches = match_template(screenshot, template_path, confidence=0.7)
-            log_info(f"Template matches found: {len(matches) if matches else 0}")
-            if matches:
-                x, y, w, h = matches[0]
-                center = (x + w//2, y + h//2)
-                tap(center[0], center[1])
-                time.sleep(0.5)
-                return
+        if template_path:
+            # Convert to absolute path for better error messages
+            template_path = os.path.abspath(template_path)
+            if os.path.exists(template_path):
+                log_info(f"Support template mode ON -> using '{template_name}' at '{template_path}'")
+                screenshot = take_screenshot()
+                matches = match_template(screenshot, template_path, confidence=0.7)
+                log_info(f"Template matches found: {len(matches) if matches else 0}")
+                if matches:
+                    x, y, w, h = matches[0]
+                    center = (x + w//2, y + h//2)
+                    tap(center[0], center[1])
+                    time.sleep(0.5)
+                    return
+                else:
+                    log_warning("Support template enabled but no match found on screen; falling back to following card.")
             else:
-                log_warning("Support template enabled but no match found on screen; falling back to following card.")
+                log_warning(f"Support template enabled but template file missing at '{template_path}'; falling back to following card.")
         else:
-            log_warning("Support template enabled but template file missing or not set; falling back to following card.")
+            log_warning("Support template enabled but template name not set; falling back to following card.")
 
     # Fallback: select first following card
     time.sleep(1)

@@ -61,3 +61,4 @@ custom_races_oguri.json
 debug_*.png
 tests/
 *.exe
+test_*.py
