@@ -275,14 +275,50 @@ class RestartTab(BaseTab):
 
         top = ctk.CTkToplevel(self.tabview)
         top.title("Crop Template")
-        max_dim = 1200
+        top.transient(self.tabview)  # Make it a transient window
+        top.grab_set()  # Make it modal
+        
+        # Get screen dimensions for responsive sizing
+        top.update_idletasks()  # Ensure window is initialized
+        screen_width = top.winfo_screenwidth()
+        screen_height = top.winfo_screenheight()
+        
+        # Use 75% of screen size with padding (leave 25% for margins and UI elements)
+        # Reserve space for buttons and padding (approximately 100px)
+        available_width = int(screen_width * 0.75)
+        available_height = int(screen_height * 0.75) - 100  # Reserve space for buttons
+        
+        # Get original image dimensions
         w, h = pil_image.size
-        scale = min(max_dim / w, max_dim / h, 1.0)
+        
+        # Calculate scale to fit within available space while maintaining aspect ratio
+        scale_w = available_width / w if w > available_width else 1.0
+        scale_h = available_height / h if h > available_height else 1.0
+        scale = min(scale_w, scale_h, 1.0)  # Don't upscale, only downscale if needed
+        
+        # Resize image for display
         display_img = pil_image.resize((int(w * scale), int(h * scale)), Image.LANCZOS) if scale < 1.0 else pil_image
+        
+        # Set window size to fit the display image with some padding
+        window_width = display_img.width + 20  # Small padding
+        window_height = display_img.height + 100  # Space for buttons
+        
+        # Ensure window doesn't exceed screen size
+        window_width = min(window_width, screen_width - 40)
+        window_height = min(window_height, screen_height - 40)
+        
+        # Set minimum window size
+        top.minsize(400, 300)
+        
+        # Center the window on screen
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        top.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
         photo = ImageTk.PhotoImage(display_img)
 
         canvas = tk.Canvas(top, width=display_img.width, height=display_img.height, cursor="cross")
-        canvas.pack()
+        canvas.pack(padx=10, pady=10)
         canvas.create_image(0, 0, anchor="nw", image=photo)
 
         selection = {}
@@ -336,7 +372,7 @@ class RestartTab(BaseTab):
 
         # Keep reference to PhotoImage
         canvas.image = photo
-        top.grab_set()
+        # grab_set() already called earlier, no need to call again
         top.wait_window()
 
         if result['bbox']:
