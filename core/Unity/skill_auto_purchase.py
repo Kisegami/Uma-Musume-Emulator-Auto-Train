@@ -282,10 +282,13 @@ def click_image_button(image_path, description="button", max_attempts=10, wait_b
         log_error(f"Error finding {description}: {e}")
         return False
 
-def fast_swipe_to_top():
+def fast_swipe_to_top(end_career=False):
     """
     Navigate to top of skill list by tapping back button and then skills button again.
     This is much faster than swiping multiple times.
+    
+    Args:
+        end_career: If True, use end_skill.png button instead of skills_btn.png
     """
     log_info(f"Navigating to top of skill list (back + skills button)")
     
@@ -302,8 +305,10 @@ def fast_swipe_to_top():
     time.sleep(0.5)
     
     # Step 3: Tap skills button again to return to top of list
-    log_debug(f"Tapping skills button to return to top of list...")
-    if tap_on_image("assets/buttons/skills_btn.png", confidence=0.8, min_search=10):
+    # Use end_skill.png in end-career mode, otherwise use skills_btn.png
+    skill_button = "assets/buttons/end_skill.png" if end_career else "assets/buttons/skills_btn.png"
+    log_debug(f"Tapping skills button to return to top of list ({skill_button})...")
+    if tap_on_image(skill_button, confidence=0.8, min_search=10):
         log_debug(f"Skills button clicked")
         time.sleep(1.0)  # Wait for skill list to load
     else:
@@ -312,13 +317,14 @@ def fast_swipe_to_top():
     
     log_debug(f"Successfully navigated to top of skill list")
 
-def execute_skill_purchases(purchase_plan, max_scrolls=20):
+def execute_skill_purchases(purchase_plan, max_scrolls=20, end_career=False):
     """
     Execute the automated skill purchase plan.
     
     Args:
         purchase_plan: List of skills to purchase (from create_purchase_plan)
         max_scrolls: Maximum number of scrolls to prevent infinite loops
+        end_career: If True, use end_skill.png button instead of skills_btn.png
     
     Returns:
         dict: {
@@ -353,7 +359,7 @@ def execute_skill_purchases(purchase_plan, max_scrolls=20):
     
     try:
         # Step 1: Fast swipe to top
-        fast_swipe_to_top()
+        fast_swipe_to_top(end_career=end_career)
         
         # Step 2: Scroll down slowly to find and purchase skills
         log_info(f"Searching for skills to purchase")

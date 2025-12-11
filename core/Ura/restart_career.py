@@ -124,7 +124,7 @@ def execute_skill_purchase_workflow(available_points: int):
         if purchase_plan:
             affordable_skills, total_cost, remaining_points = filter_affordable_skills(purchase_plan, available_points)
             if affordable_skills:
-                execute_skill_purchases(affordable_skills)
+                execute_skill_purchases(affordable_skills, end_career=True)
     
     # Return to complete career screen
     return_to_complete_career_screen()
