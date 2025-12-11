@@ -199,7 +199,7 @@ def career_lobby():
             complete_career_matches = match_template(screenshot, "assets/buttons/complete_career.png", confidence=0.8)
             if complete_career_matches:
                 log_info(f"Complete Career screen detected - starting restart workflow")
-                from core.restart_career import career_lobby_check
+                from core.Ura.restart_career import career_lobby_check
                 should_continue = career_lobby_check(screenshot)
                 if not should_continue:
                     log_info(f"Career restart workflow completed - stopping bot")
