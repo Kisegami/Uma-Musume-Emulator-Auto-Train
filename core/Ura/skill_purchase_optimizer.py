@@ -138,7 +138,7 @@ def find_best_real_skill_match(ocr_skill_name, target_skill_name=None, threshold
         'is_target_match': False
     }
 
-def fuzzy_match_skill_name(skill_name, target_name, threshold=0.8):
+def fuzzy_match_skill_name(skill_name, target_name, threshold=0.9):
     """
     Check if two skill names match directly using string similarity (no DB lookup).
     """
@@ -147,31 +147,41 @@ def fuzzy_match_skill_name(skill_name, target_name, threshold=0.8):
     similarity = SequenceMatcher(None, _normalize(skill_name), _normalize(target_name)).ratio()
     return similarity >= threshold
 
-def find_matching_skill(skill_name, available_skills):
+def find_matching_skill(skill_name, available_skills, excluded_skills=None):
     """
     Find a skill in available_skills that matches skill_name using precise real skill matching.
     
     Args:
         skill_name: Name to search for (from user config)
         available_skills: List of available skill dicts (from OCR)
+        excluded_skills: Set of skill names (from OCR) that have already been matched and should be skipped
     
     Returns:
         dict or None: Matching skill dict, or None if not found
     """
+    if excluded_skills is None:
+        excluded_skills = set()
+    
     # Try exact match first
     skill_name_clean = skill_name.lower().strip()
     for skill in available_skills:
         if skill['name'].lower().strip() == skill_name_clean:
-            log_debug(f"Exact match found: '{skill['name']}' matches '{skill_name}'")
-            return skill
+            # Check if this skill is already matched
+            if skill['name'] not in excluded_skills:
+                log_debug(f"Exact match found: '{skill['name']}' matches '{skill_name}'")
+                return skill
     
     # Use direct fuzzy matching against available skills (no DB)
     best_skill = None
     best_confidence = 0.0
     
     for skill in available_skills:
+        # Skip skills that have already been matched
+        if skill['name'] in excluded_skills:
+            continue
+            
         similarity = SequenceMatcher(None, _normalize(skill.get('name', '')), _normalize(skill_name)).ratio()
-        if similarity >= 0.8 and similarity > best_confidence:
+        if similarity >= 0.9 and similarity > best_confidence:
             best_skill = skill
             best_confidence = similarity
             log_debug(f"Match: '{skill['name']}' matches target '{skill_name}' (confidence: {similarity:.3f})")
@@ -209,6 +219,7 @@ def create_purchase_plan(available_skills, config, end_career=False):
     available_by_name = {skill['name']: skill for skill in available_skills}
     
     purchase_plan = []
+    matched_skills = set()  # Track skills that have already been matched to prevent duplicates
     
     log_info(f"Creating purchase plan (end_career: {end_career})")
     log_debug(f"Priority list: {len(skill_priority)} skills")
@@ -226,23 +237,41 @@ def create_purchase_plan(available_skills, config, end_career=False):
             base_skill_name = gold_upgrades[priority_skill]
             
             # Rule 1: If gold skill appears → buy it (try exact then fuzzy match)
-            skill = available_by_name.get(priority_skill) or find_matching_skill(priority_skill, available_skills)
+            skill = None
+            if priority_skill in available_by_name and available_by_name[priority_skill]['name'] not in matched_skills:
+                skill = available_by_name[priority_skill]
+            else:
+                skill = find_matching_skill(priority_skill, available_skills, excluded_skills=matched_skills)
+            
             if skill:
                 purchase_plan.append(skill)
+                matched_skills.add(skill['name'])  # Mark as matched
                 log_info(f"Gold skill found: {skill['name']} - {skill['price']}")
                 
             # Rule 2: If gold not available but base skill appears → buy base
             else:
-                base_skill = available_by_name.get(base_skill_name) or find_matching_skill(base_skill_name, available_skills)
+                base_skill = None
+                if base_skill_name in available_by_name and available_by_name[base_skill_name]['name'] not in matched_skills:
+                    base_skill = available_by_name[base_skill_name]
+                else:
+                    base_skill = find_matching_skill(base_skill_name, available_skills, excluded_skills=matched_skills)
+                
                 if base_skill:
                     purchase_plan.append(base_skill)
+                    matched_skills.add(base_skill['name'])  # Mark as matched
                     log_info(f"Base skill found: {base_skill['name']} - {base_skill['price']} (for {priority_skill}")
                 
         else:
             # Regular skill - just buy if available (try exact then fuzzy match)
-            skill = available_by_name.get(priority_skill) or find_matching_skill(priority_skill, available_skills)
+            skill = None
+            if priority_skill in available_by_name and available_by_name[priority_skill]['name'] not in matched_skills:
+                skill = available_by_name[priority_skill]
+            else:
+                skill = find_matching_skill(priority_skill, available_skills, excluded_skills=matched_skills)
+            
             if skill:
                 purchase_plan.append(skill)
+                matched_skills.add(skill['name'])  # Mark as matched
                 log_info(f"Regular skill: {skill['name']} - {skill['price']}")
     
     # End-career mode: after priority skills, add remaining skills (cheapest first)

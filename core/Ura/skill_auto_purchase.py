@@ -2,7 +2,7 @@ import time
 import os
 import json
 from core.Ura.skill_recognizer import take_screenshot, recognize_skill_up_locations
-from utils.input import perform_swipe, tap
+from utils.input import perform_swipe, tap, tap_on_image
 from core.Ura.skill_purchase_optimizer import fuzzy_match_skill_name
 from utils.log import log_debug, log_info, log_warning, log_error
 
@@ -284,20 +284,33 @@ def click_image_button(image_path, description="button", max_attempts=10, wait_b
 
 def fast_swipe_to_top():
     """
-    Perform fast swipes to get to the top of the skill list.
+    Navigate to top of skill list by tapping back button and then skills button again.
+    This is much faster than swiping multiple times.
     """
-    log_info(f"Fast scrolling to top of skill list")
+    log_info(f"Navigating to top of skill list (back + skills button)")
     
-    for i in range(8):
-        log_debug(f"[DEBUG] Fast swipe {i+1}/8")
-        success = swipe_skill_list_up_fast(wait_before=0.5)
-        if success:
-            time.sleep(0.3)  # Short wait between fast swipes
-        else:
-            log_warning(f"Fast swipe {i+1} failed")
+    # Step 1: Tap back button to exit skill list
+    log_debug(f"Tapping back button...")
+    if tap_on_image("assets/buttons/back_btn.png", confidence=0.8, min_search=10):
+        log_debug(f"Back button clicked")
+        time.sleep(0.5)  # Wait for UI to respond
+    else:
+        log_warning(f"Back button not found, trying to continue anyway")
+        time.sleep(0.5)
     
-    log_debug(f"Waiting for UI to settle")
-    time.sleep(1.5)  # Reduced wait time
+    # Step 2: Wait a moment for UI to settle
+    time.sleep(0.5)
+    
+    # Step 3: Tap skills button again to return to top of list
+    log_debug(f"Tapping skills button to return to top of list...")
+    if tap_on_image("assets/buttons/skills_btn.png", confidence=0.8, min_search=10):
+        log_debug(f"Skills button clicked")
+        time.sleep(1.0)  # Wait for skill list to load
+    else:
+        log_error(f"Skills button not found after back button")
+        return
+    
+    log_debug(f"Successfully navigated to top of skill list")
 
 def execute_skill_purchases(purchase_plan, max_scrolls=20):
     """
