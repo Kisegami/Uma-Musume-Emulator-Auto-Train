@@ -56,6 +56,27 @@ class MainTab(BaseTab):
 
         # ADB Configuration Section
         adb_frame, _ = self.create_section_frame(main_scroll, "ADB Configuration")
+
+        # Emulator Type (detected at launch)
+        emulator_types = getattr(self.config_panel.main_window, 'detected_emulator_types', []) or []
+        if not emulator_types:
+            # Fallback: try detecting now
+            try:
+                from utils.emulator_detect import list_emulator_types
+                emulator_types = list_emulator_types()
+                self.config_panel.main_window.detected_emulator_types = emulator_types
+            except Exception:
+                emulator_types = []
+        self.config_panel.emulator_type_var = tk.StringVar(value=config.get('emulator_type', ''))
+        self.add_variable_with_autosave('emulator_type', self.config_panel.emulator_type_var)
+        values = emulator_types if emulator_types else ['']
+        _, emu_type_combo = self.create_setting_row(
+            adb_frame,
+            "Emulator Type:",
+            'optionmenu',
+            values=values,
+            variable=self.config_panel.emulator_type_var
+        )
         
         # Device Address
         self.config_panel.device_address_var = tk.StringVar(value=config.get('adb_config', {}).get('device_address', '127.0.0.1:7555'))
@@ -79,10 +100,10 @@ class MainTab(BaseTab):
         capture_frame, _ = self.create_section_frame(main_scroll, "Screenshot Capture")
 
         # Method selector
-        self.config_panel.capture_method_var = tk.StringVar(value=config.get('capture_method', 'adb'))
+        self.config_panel.capture_method_var = tk.StringVar(value=config.get('capture_method', 'auto'))
         self.add_variable_with_autosave('capture_method', self.config_panel.capture_method_var)
         _, method_combo = self.create_setting_row(capture_frame, "Method:", 'optionmenu', 
-                                                 values=['adb', 'nemu_ipc', 'ldopengl'], 
+                                                 values=['auto', 'adb', 'nemu_ipc', 'ldopengl'], 
                                                  variable=self.config_panel.capture_method_var,
                                                  command=lambda _: self.config_panel.toggle_capture_settings())
 
@@ -159,6 +180,9 @@ class MainTab(BaseTab):
             'input_delay': self.config_panel.input_delay_var.get(),
             'connection_timeout': self.config_panel.connection_timeout_var.get()
         }
+
+        # Emulator type
+        config['emulator_type'] = self.config_panel.emulator_type_var.get()
         
         # Update capture method
         config['capture_method'] = self.config_panel.capture_method_var.get()

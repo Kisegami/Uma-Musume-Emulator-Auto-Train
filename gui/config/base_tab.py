@@ -148,6 +148,9 @@ class BaseTab:
         # Skip auto-save during initialization
         if getattr(self, '_initializing', False):
             return
+        # Skip when bot is running to avoid clobbering auto-detected values
+        if getattr(self.main_window, "bot_running", False):
+            return
             
         try:
             config = self.main_window.get_config()

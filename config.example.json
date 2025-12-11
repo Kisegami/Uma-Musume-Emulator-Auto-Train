@@ -1,20 +1,21 @@
 {
-  "capture_method": "adb",
+  "capture_method": "auto",
+  "emulator_type": "",
   "adb_config": {
-    "device_address": "127.0.0.1:16448",
+    "device_address": "auto",
     "adb_path": "adb",
     "screenshot_timeout": 5,
     "input_delay": 0.5,
     "connection_timeout": 10
   },
   "nemu_ipc_config": {
-    "nemu_folder": "J:\\MuMuPlayerGlobal",
-    "instance_id": 2,
+    "nemu_folder": "",
+    "instance_id": 0,
     "display_id": 0,
     "timeout": 1.0
   },
   "ldopengl_config": {
-    "ld_folder": "J:\\LDPlayer\\LDPlayer9",
+    "ld_folder": "",
     "instance_id": 0,
     "orientation": 0
   },

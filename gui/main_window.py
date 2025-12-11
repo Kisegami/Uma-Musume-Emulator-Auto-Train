@@ -56,6 +56,23 @@ class MainWindow:
         
         # Load configuration
         self.load_config()
+        # Detect emulator types available on this machine (prefer injected from launcher)
+        env_detect = os.environ.get("UMA_DETECTED_EMULATOR_TYPES")
+        if env_detect:
+            try:
+                self.detected_emulator_types = json.loads(env_detect)
+            except Exception:
+                self.detected_emulator_types = []
+        else:
+            try:
+                from utils.emulator_detect import list_emulator_types
+                self.detected_emulator_types = list_emulator_types()
+                try:
+                    self.add_log(f"Detected emulator types: {self.detected_emulator_types}", "info")
+                except Exception:
+                    pass
+            except Exception:
+                self.detected_emulator_types = []
 
         # Create GUI components
         self.create_widgets()
@@ -120,7 +137,8 @@ class MainWindow:
     def get_default_config(self):
         """Get default configuration"""
         return {
-            "capture_method": "adb",
+            "capture_method": "auto",
+            "emulator_type": "",
             "adb_config": {
                 "device_address": "127.0.0.1:7555",
                 "adb_path": "adb",
@@ -213,6 +231,12 @@ class MainWindow:
     
     def auto_save(self):
         """Perform automatic save without showing success message"""
+        # If bot is running and auto-detect just set values, avoid overwriting until it syncs.
+        try:
+            if getattr(self, "bot_running", False):
+                return
+        except Exception:
+            pass
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)

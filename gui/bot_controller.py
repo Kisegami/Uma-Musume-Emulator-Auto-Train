@@ -7,6 +7,8 @@ import json
 import queue
 import re
 from datetime import datetime
+from tkinter import messagebox
+from utils.emulator_detect import resolve_emulator_connection, EmulatorManager, Emulator
 
 class BotController:
     def __init__(self, main_window):
@@ -47,12 +49,165 @@ class BotController:
         """Start the status update thread"""
         self.status_update_thread = threading.Thread(target=self.status_update_loop, daemon=True)
         self.status_update_thread.start()
+
+    def prepare_emulator_connection(self) -> bool:
+        """
+        Validate emulator selection, resolve auto device address,
+        and auto-pick screenshot method based on emulator type.
+        """
+        cfg = self.main_window.get_config()
+        emulator_type = cfg.get("emulator_type", "").strip()
+        if not emulator_type:
+            messagebox.showerror("Emulator required", "Please choose an emulator type before starting.")
+            return False
+
+        adb_cfg = cfg.get("adb_config", {})
+        adb_path = adb_cfg.get("adb_path", "adb")
+        device_address = adb_cfg.get("device_address", "")
+
+        manager = EmulatorManager()
+        chosen_instance = None
+        chosen_serial = None
+
+        self.main_window.add_log(
+            f"[auto-detect] emulator_type={emulator_type}, device_address={device_address}, capture_method={cfg.get('capture_method')}",
+            "info"
+        )
+
+        if device_address == "auto":
+            # Show candidates
+            try:
+                insts = manager.instances_by_type(emulator_type)
+                self.main_window.add_log(
+                    f"[auto-detect] found instances: {[f'{i.type}:{i.name}:{i.serial}' for i in insts]}",
+                    "info"
+                )
+            except Exception as e:
+                self.main_window.add_log(f"[auto-detect] instance listing failed: {e}", "warning")
+
+            inst, serial, running = resolve_emulator_connection(emulator_type, adb_path=adb_path)
+            self.main_window.add_log(
+                f"[auto-detect] adb running serials for type={emulator_type}: {running}",
+                "info"
+            )
+            if serial is None:
+                if not running:
+                    messagebox.showerror(
+                        "No emulator running",
+                        "No running emulator detected for the selected type. "
+                        "Please start the emulator and try again."
+                    )
+                    return False
+                else:
+                    messagebox.showerror(
+                        "Multiple emulators",
+                        "Multiple running emulators detected. Close others or set the ADB address manually."
+                    )
+                    return False
+            chosen_instance, chosen_serial = inst, serial
+            cfg.setdefault("adb_config", {})["device_address"] = serial
+            self.main_window.set_config(cfg)
+            self.main_window.add_log(f"Auto-selected ADB device: {serial}", "info")
+        else:
+            # Keep manual address; try to locate matching instance for downstream settings
+            instances = manager.instances_by_type(emulator_type)
+            chosen_instance = instances[0] if instances else None
+            chosen_serial = device_address
+
+        # Auto pick screenshot method
+        cap_method = cfg.get("capture_method", "auto")
+        if cap_method == "auto":
+            if emulator_type == Emulator.MuMuPlayer12 and chosen_instance:
+                cfg["capture_method"] = "nemu_ipc"
+                exe_dir = os.path.dirname(chosen_instance.path)
+                parent_dir = os.path.dirname(exe_dir)
+                cfg.setdefault("nemu_ipc_config", {})
+                cfg["nemu_ipc_config"]["nemu_folder"] = parent_dir
+                cfg["nemu_ipc_config"]["instance_id"] = chosen_instance.mumu12_id or 0
+                cfg["nemu_ipc_config"]["display_id"] = cfg["nemu_ipc_config"].get("display_id", 0)
+                cfg["nemu_ipc_config"]["timeout"] = cfg["nemu_ipc_config"].get("timeout", 1.0)
+                self.main_window.add_log(
+                    f"Auto-set screenshot method to nemu_ipc for MuMuPlayer12 "
+                    f"(folder={parent_dir}, instance_id={cfg['nemu_ipc_config']['instance_id']})",
+                    "info"
+                )
+            elif emulator_type == Emulator.LDPlayer9 and chosen_instance:
+                cfg["capture_method"] = "ldopengl"
+                exe_dir = os.path.dirname(chosen_instance.path)
+                cfg.setdefault("ldopengl_config", {})
+                cfg["ldopengl_config"]["ld_folder"] = exe_dir
+                if chosen_instance.ldplayer_id is not None:
+                    cfg["ldopengl_config"]["instance_id"] = chosen_instance.ldplayer_id
+                cfg["ldopengl_config"]["orientation"] = cfg["ldopengl_config"].get("orientation", 0)
+                self.main_window.add_log(
+                    f"Auto-set screenshot method to ldopengl for LDPlayer9 "
+                    f"(ld_folder={exe_dir}, instance_id={cfg['ldopengl_config'].get('instance_id')})",
+                    "info"
+                )
+            else:
+                cfg["capture_method"] = "adb"
+                self.main_window.add_log("Auto-set screenshot method to adb", "info")
+        else:
+            # If user already chose nemu_ipc/ldopengl but folder/instance missing, try to fill from detected instance.
+            if emulator_type == Emulator.MuMuPlayer12 and chosen_instance:
+                exe_dir = os.path.dirname(chosen_instance.path)
+                parent_dir = os.path.dirname(exe_dir)
+                cfg.setdefault("nemu_ipc_config", {})
+                if not cfg["nemu_ipc_config"].get("nemu_folder"):
+                    cfg["nemu_ipc_config"]["nemu_folder"] = parent_dir
+                    self.main_window.add_log(
+                        f"[auto-detect] Filled MuMu nemu_folder={parent_dir} from instance path", "info"
+                    )
+                if not cfg["nemu_ipc_config"].get("instance_id"):
+                    cfg["nemu_ipc_config"]["instance_id"] = chosen_instance.mumu12_id or 0
+            if emulator_type == Emulator.LDPlayer9 and chosen_instance:
+                exe_dir = os.path.dirname(chosen_instance.path)
+                cfg.setdefault("ldopengl_config", {})
+                if not cfg["ldopengl_config"].get("ld_folder"):
+                    cfg["ldopengl_config"]["ld_folder"] = exe_dir
+                    self.main_window.add_log(
+                        f"[auto-detect] Filled LDPlayer ld_folder={exe_dir} from instance path", "info"
+                    )
+                if cfg["ldopengl_config"].get("instance_id") in [None, ""]:
+                    if chosen_instance.ldplayer_id is not None:
+                        cfg["ldopengl_config"]["instance_id"] = chosen_instance.ldplayer_id
+
+        # Sync updated config into main window before saving
+        self.main_window.set_config(cfg)
+
+        # Persist immediately so main.py sees resolved values
+        try:
+            # Force-sync main_window.config before saving
+            self.main_window.config = cfg
+            # Write to disk immediately with resolved values
+            import json
+            with open(self.main_window.config_file, 'w', encoding='utf-8') as f:
+                json.dump(self.main_window.config, f, indent=2, ensure_ascii=False)
+            self.main_window.add_log("[auto-detect] config saved after resolving emulator/device/capture", "info")
+            # Refresh main tab fields to reflect resolved values on the UI thread
+            if hasattr(self.main_window, "config_panel") and hasattr(self.main_window.config_panel, "update_main_tab_from_config"):
+                try:
+                    resolved_cfg = self.main_window.get_config()
+                    self.main_window.root.after(
+                        0,
+                        lambda: self.main_window.config_panel.update_main_tab_from_config(resolved_cfg)
+                    )
+                except Exception:
+                    # Fallback to direct call if scheduling fails
+                    self.main_window.config_panel.update_main_tab_from_config(cfg)
+        except Exception as e:
+            self.main_window.add_log(f"[auto-detect] failed to save config: {e}", "warning")
+
+        return True
     
     def start_bot(self):
         """Start the bot automation"""
         if self.bot_running:
             return
-        
+
+        if not self.prepare_emulator_connection():
+            return
+
         self.bot_running = True
         self.main_window.add_log("Starting Uma Musume Auto-Train Bot...", "info")
         

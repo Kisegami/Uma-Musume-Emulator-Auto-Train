@@ -89,6 +89,40 @@ class ConfigPanel(ctk.CTkFrame):
             training_tab = self._tabs['training']
             if hasattr(training_tab, 'refresh_training_score_values'):
                 training_tab.refresh_training_score_values()
+
+    def update_main_tab_from_config(self, config: dict):
+        """
+        Sync main tab fields with current config values.
+        Intended to be called after auto-detect updates config programmatically.
+        """
+        try:
+            if hasattr(self, 'device_address_var'):
+                self.device_address_var.set(config.get('adb_config', {}).get('device_address', ''))
+            if hasattr(self, 'adb_path_var'):
+                self.adb_path_var.set(config.get('adb_config', {}).get('adb_path', 'adb'))
+            if hasattr(self, 'capture_method_var'):
+                self.capture_method_var.set(config.get('capture_method', 'auto'))
+            if hasattr(self, 'emulator_type_var'):
+                self.emulator_type_var.set(config.get('emulator_type', ''))
+            if hasattr(self, 'nemu_folder_var'):
+                self.nemu_folder_var.set(config.get('nemu_ipc_config', {}).get('nemu_folder', ''))
+            if hasattr(self, 'nemu_instance_var'):
+                self.nemu_instance_var.set(config.get('nemu_ipc_config', {}).get('instance_id', 0))
+            if hasattr(self, 'nemu_display_var'):
+                self.nemu_display_var.set(config.get('nemu_ipc_config', {}).get('display_id', 0))
+            if hasattr(self, 'nemu_timeout_var'):
+                self.nemu_timeout_var.set(config.get('nemu_ipc_config', {}).get('timeout', 1.0))
+            if hasattr(self, 'ldopengl_folder_var'):
+                self.ldopengl_folder_var.set(config.get('ldopengl_config', {}).get('ld_folder', ''))
+            if hasattr(self, 'ldopengl_instance_var'):
+                self.ldopengl_instance_var.set(config.get('ldopengl_config', {}).get('instance_id', 0))
+            if hasattr(self, 'ldopengl_orientation_var'):
+                self.ldopengl_orientation_var.set(config.get('ldopengl_config', {}).get('orientation', 0))
+            # Update visibility based on capture method
+            if hasattr(self, 'toggle_capture_settings'):
+                self.toggle_capture_settings()
+        except Exception as e:
+            print(f"Warning: failed to update main tab fields: {e}")
     
     def save_config(self):
         """Save the current configuration"""
@@ -105,6 +139,7 @@ class ConfigPanel(ctk.CTkFrame):
                     'input_delay': self.input_delay_var.get(),
                     'connection_timeout': self.connection_timeout_var.get()
                 }
+                config['emulator_type'] = getattr(self, 'emulator_type_var', tk.StringVar(value="")).get()
 
                 # Capture method & settings
                 config['capture_method'] = self.capture_method_var.get()

@@ -28,6 +28,7 @@ if script_dir and script_dir not in sys.path:
 import json
 from utils.log import log_info, log_warning, log_error, log_debug, log_success
 from utils.config_loader import load_main_config
+from utils.emulator_detect import list_emulator_types
 
 def main():
     """Main launcher function"""
@@ -86,6 +87,15 @@ def main():
     except Exception as e:
         print(f"Warning: Could not check configuration files: {e}")
         print("GUI will continue without automatic config file creation.")
+    
+    # Detect emulator types up front and pass via environment
+    try:
+        detected_types = list_emulator_types()
+        os.environ["UMA_DETECTED_EMULATOR_TYPES"] = json.dumps(detected_types)
+        print(f"Detected emulator types: {detected_types}")
+    except Exception as e:
+        print(f"Warning: Emulator detection failed: {e}")
+        os.environ.pop("UMA_DETECTED_EMULATOR_TYPES", None)
     
     try:
         # Import and run the GUI
