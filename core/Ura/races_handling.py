@@ -599,7 +599,21 @@ def enter_race_selection_screen():
     else:
         log_debug(f"OK button not found, proceeding without it")
         time.sleep(0.5)  # Shorter wait since no OK button
+        # Try to tap OK button if it appears (optional)
+    ok_clicked = tap_on_image("assets/buttons/ok_btn.png", confidence=0.5, min_search=2)
+    if ok_clicked:
+        log_debug(f"OK button found and clicked")
+    else:
+        log_debug(f"OK button not found, proceeding without it")
     
+    # Wait for race button to appear, indicating the race list is loaded
+    log_debug(f"Waiting for race button to appear (race list loading)...")
+    race_btn = wait_for_image("assets/buttons/race_btn.png", timeout=10)
+    if not race_btn:
+        log_debug(f"Race button not found after 10 seconds, race list may not have loaded")
+        return False
+    
+    log_debug(f"Race button appeared, race list is on screen")
     return True
 
 def check_and_select_maiden_race():
